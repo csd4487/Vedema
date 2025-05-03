@@ -22,7 +22,7 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.only(top: 45.0),
+        padding: const EdgeInsets.only(top: 85.0),
         child: Align(
           alignment: Alignment.topCenter,
           child: Column(

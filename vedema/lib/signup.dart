@@ -25,7 +25,7 @@ class SignUpScreenState extends State<SignUpScreen> {
     if (_formKey.currentState!.validate()) {
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:5000/api/signup'),
+          Uri.parse('http://192.168.1.2:5000/api/signup'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'firstname': user.firstname,
@@ -39,11 +39,7 @@ class SignUpScreenState extends State<SignUpScreen> {
 
         if (response.statusCode == 201) {
           logger.i('User created successfully!');
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('User created successfully!')));
-
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => MyHomePage()),
           );

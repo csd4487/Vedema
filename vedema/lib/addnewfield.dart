@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'user.dart';
-import 'fields.dart';
 import 'package:logger/logger.dart';
+import 'fields.dart';
 
 class AddNewFieldScreen extends StatefulWidget {
   final User user;
@@ -22,6 +22,7 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
   int _oliveNo = 0;
   double _cubics = 0.0;
   double _price = 0.0;
+  String _species = '';
 
   Future<void> _submitForm() async {
     if (formKey.currentState?.validate() ?? false) {
@@ -33,10 +34,11 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
           'oliveNo': _oliveNo,
           'cubics': _cubics,
           'price': _price,
+          'species': _species,
         };
 
         final response = await http.post(
-          Uri.parse('http://localhost:5000/api/addField'),
+          Uri.parse('http://192.168.1.2:5000/api/addField'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(requestData),
         );
@@ -46,12 +48,8 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
         if (response.statusCode == 200) {
           logger.i("Field added successfully");
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('New field added successfully!')),
-          );
-
           widget.user.fields.add(
-            Field(_location, _size, _oliveNo, _cubics, _price),
+            Field(_location, _size, _oliveNo, _cubics, _price, _species),
           );
 
           Navigator.pushReplacement(
@@ -62,17 +60,9 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
           );
         } else {
           logger.e("Error adding field: ${response.statusCode}");
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error adding field: ${response.statusCode}'),
-            ),
-          );
         }
       } catch (error) {
         logger.e("Error adding field: $error");
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error adding field: $error')));
       }
     }
   }
@@ -238,6 +228,51 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                       onChanged: (value) {
                         setState(() {
                           _oliveNo = int.tryParse(value) ?? 0;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'You need to fill this field.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 13),
+                    const Text(
+                      'Species',
+                      style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      style: const TextStyle(color: Color(0xFF655B40)),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Color(0xFF655B40),
+                            width: 2.0,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Color(0xFF655B40),
+                            width: 2.0,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Color(0xFF655B40),
+                            width: 2.0,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.red, width: 2.0),
+                        ),
+                        hintText: 'Enter olive species',
+                        hintStyle: TextStyle(color: Color(0xFF655B40)),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _species = value;
                         });
                       },
                       validator: (value) {

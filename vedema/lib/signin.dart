@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'signup.dart';
 import 'user.dart';
-import 'userhomepage.dart';
+import 'fields.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -26,7 +26,7 @@ class SignInScreenState extends State<SignInScreen> {
       });
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:5000/api/signin'),
+          Uri.parse('http://192.168.1.2:5000/api/signin'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'email': user.email, 'password': user.password}),
         );
@@ -46,7 +46,7 @@ class SignInScreenState extends State<SignInScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => UserHomePage(user: loggedInUser),
+              builder: (context) => FieldsScreen(user: loggedInUser),
             ),
           );
         } else {
@@ -67,6 +67,11 @@ class SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final borderColor = Color(0xFF655B40);
+    final border = OutlineInputBorder(
+      borderSide: BorderSide(color: borderColor, width: 2.0),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Log In", style: TextStyle(color: Colors.white)),
@@ -113,12 +118,11 @@ class SignInScreenState extends State<SignInScreen> {
                           (value) => value!.isEmpty ? 'Enter an email' : null,
                       style: TextStyle(color: Color(0xFF655B40)),
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Color(0xFF655B40),
-                            width: 2.0,
-                          ),
-                        ),
+                        enabledBorder: border,
+                        focusedBorder: border,
+                        errorBorder: border,
+                        disabledBorder: border,
+                        focusedErrorBorder: border,
                         hintText: 'Enter your email',
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                         errorText: _emailError,
@@ -139,12 +143,11 @@ class SignInScreenState extends State<SignInScreen> {
                           (value) => value!.isEmpty ? 'Enter a password' : null,
                       style: TextStyle(color: Color(0xFF655B40)),
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Color(0xFF655B40),
-                            width: 2.0,
-                          ),
-                        ),
+                        enabledBorder: border,
+                        focusedBorder: border,
+                        errorBorder: border,
+                        disabledBorder: border,
+                        focusedErrorBorder: border,
                         hintText: 'Enter your password',
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                         errorText: _passwordError,
