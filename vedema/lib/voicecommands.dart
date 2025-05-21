@@ -5,6 +5,8 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:collection/collection.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 import 'notes.dart';
 import 'addnewnote.dart';
 import 'user.dart';
@@ -31,9 +33,10 @@ class VoiceCommandHandler {
   }
 
   Future<void> _startListening(BuildContext context, User user) async {
+    final loc = AppLocalizations.of(context)!;
     var status = await Permission.microphone.request();
     if (status != PermissionStatus.granted) {
-      _textController.add('Microphone permission denied');
+      _textController.add(loc.microphonePermissionDenied);
       return;
     }
 
@@ -44,30 +47,31 @@ class VoiceCommandHandler {
         }
       },
       onError: (error) {
-        _textController.add('Speech error: ${error.errorMsg}');
+        _textController.add("${loc.speechError}: ${error.errorMsg}");
       },
     );
 
     if (!available) {
-      _textController.add('Speech not available');
+      _textController.add(loc.speechNotAvailable);
       return;
     }
 
     _isListening = true;
     _listeningController.add(true);
 
+    final isGreek = Localizations.localeOf(context).languageCode == 'el';
+    final localeId = isGreek ? 'el_GR' : 'en_US';
+
     _speech.listen(
       onResult: (result) {
         String recognized = result.recognizedWords;
-        print("Speech result: $recognized");
         _textController.add(recognized);
 
         if (result.finalResult) {
-          print("Final result received: $recognized");
-          _handleCommand(context, recognized.toLowerCase(), user);
+          _handleCommand(context, recognized.toLowerCase(), user, loc);
         }
       },
-      localeId: 'en_US',
+      localeId: localeId,
       listenMode: stt.ListenMode.dictation,
       partialResults: true,
       cancelOnError: false,
@@ -82,19 +86,24 @@ class VoiceCommandHandler {
     _listeningController.add(false);
   }
 
-  void _handleCommand(BuildContext context, String command, User user) {
-    if (command.contains('add new note')) {
+  void _handleCommand(
+    BuildContext context,
+    String command,
+    User user,
+    AppLocalizations loc,
+  ) {
+    if (command.contains(loc.voiceAddNote.toLowerCase())) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => AddNewNotePage(user: user)),
       );
-    } else if (command.contains('notes')) {
+    } else if (command.contains(loc.voiceNotes.toLowerCase())) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => NotesPage(user: user)),
       );
     } else {
-      _fetchAndNavigateToField(context, command, user);
+      _fetchAndNavigateToField(context, command, user, loc);
     }
   }
 
@@ -102,10 +111,11 @@ class VoiceCommandHandler {
     BuildContext context,
     String command,
     User user,
+    AppLocalizations loc,
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.2:5000/api/getFields'),
+        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getFields'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': user.email}),
       );
@@ -140,18 +150,18 @@ class VoiceCommandHandler {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No matching field found for: $command')),
+            SnackBar(content: Text("${loc.noFieldMatch}: $command")),
           );
         }
       } else {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to fetch fields')));
+        ).showSnackBar(SnackBar(content: Text(loc.failedToFetchFields)));
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      ).showSnackBar(SnackBar(content: Text("${loc.error}: ${e.toString()}")));
     }
   }
 }

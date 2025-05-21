@@ -7,11 +7,16 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
         android:required="false"/>
+    
+    <!-- Storage Permissions for Excel Export -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
     <application
         android:label="vedema"
-        android:icon="@mipmap/ic_launcher">
-        
+        android:icon="@mipmap/ic_launcher"
+        android:requestLegacyExternalStorage="true"> <!-- Important for Android 10 -->
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

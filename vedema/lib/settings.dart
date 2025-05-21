@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'notes.dart';
 import 'main.dart';
 import 'user.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'provider/language_provider.dart';
+import 'package:provider/provider.dart';
 
 class SettingsSidebar extends StatelessWidget {
   final User user;
@@ -11,6 +15,7 @@ class SettingsSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final loc = AppLocalizations.of(context)!;
 
     return Align(
       alignment: Alignment.topRight,
@@ -48,16 +53,16 @@ class SettingsSidebar extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            _settingsButton("Notes", () {
+            _settingsButton(loc.notes, () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => NotesPage(user: user)),
               );
             }),
             _divider(),
-            _settingsButton("Language", null),
+            _settingsButton(loc.language, () => _showLanguageDialog(context)),
             _divider(),
-            _settingsButton("Logout", () {
+            _settingsButton(loc.logout, () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const MyHomePage()),
@@ -67,6 +72,36 @@ class SettingsSidebar extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showLanguageDialog(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(loc.chooseLanguage),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: const Text('English'),
+                  onTap: () => _setLocale(context, 'en'),
+                ),
+                ListTile(
+                  title: const Text('Ελληνικά'),
+                  onTap: () => _setLocale(context, 'el'),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _setLocale(BuildContext context, String languageCode) {
+    final newLocale = Locale(languageCode);
+    Provider.of<LanguageProvider>(context, listen: false).setLocale(newLocale);
+    Navigator.of(context).pop();
   }
 
   Widget _settingsButton(String label, VoidCallback? onTap) {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'user.dart';
 import 'separatefield.dart';
@@ -30,11 +31,56 @@ class _NewTaskFormState extends State<NewTaskForm> {
   final _npkController = TextEditingController();
   final _notesController = TextEditingController();
 
+  DateTime? _selectedDate;
+
+  late String _taskKey;
+
   @override
-  void initState() {
-    super.initState();
-    if (widget.taskName != 'Other') {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final loc = AppLocalizations.of(context)!;
+
+    _taskKey = _normalizeTaskKey(widget.taskName, loc);
+
+    if (_taskKey != 'other') {
       _taskController.text = widget.taskName;
+    }
+  }
+
+  String _normalizeTaskKey(String taskName, AppLocalizations loc) {
+    final normalized = taskName.trim().toLowerCase();
+
+    if (normalized == 'irrigation' ||
+        normalized == loc.irrigation.toLowerCase()) {
+      return 'irrigation';
+    }
+    if (normalized == 'fertilization' ||
+        normalized == loc.fertilization.toLowerCase()) {
+      return 'fertilization';
+    }
+    if (normalized == 'spraying' || normalized == loc.spraying.toLowerCase()) {
+      return 'spraying';
+    }
+    if (normalized == 'other' || normalized == loc.other.toLowerCase()) {
+      return 'other';
+    }
+    return 'other';
+  }
+
+  Future<void> _pickDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _dateController.text =
+            '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
     }
   }
 
@@ -42,20 +88,18 @@ class _NewTaskFormState extends State<NewTaskForm> {
     if (_formKey.currentState!.validate()) {
       try {
         final expenseData = {
-          'task': _taskController.text,
+          'task': _taskKey,
           'date': _dateController.text,
           'cost': double.parse(_costController.text),
-          'synthesis': _synthesisController.text,
-          'type': _typeController.text,
-          'npk': _npkController.text,
+          'synthesis': _hideSynthesisTypeNPK ? '' : _synthesisController.text,
+          'type': _hideSynthesisTypeNPK ? '' : _typeController.text,
+          'npk': _hideSynthesisTypeNPK ? '' : _npkController.text,
           'notes': _notesController.text,
           'location': widget.field.location,
         };
 
-        print('Sending expense data: ${json.encode(expenseData)}');
-
         final response = await http.post(
-          Uri.parse('http://192.168.1.2:5000/api/addExpense'),
+          Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/addExpense'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({
             'email': widget.user.email,
@@ -78,23 +122,31 @@ class _NewTaskFormState extends State<NewTaskForm> {
           final responseBody = json.decode(response.body);
           print('Error: ${responseBody['message']}');
         }
-      } on FormatException catch (e) {
-        print('Data format error: ${e.message}');
-      } catch (error) {
-        print('Error: ${error.toString()}');
+      } catch (e) {
+        print('Error: $e');
       }
     }
   }
 
+  bool get _hideSynthesisTypeNPK {
+    final key = _taskKey.trim().toLowerCase();
+    return key == 'other' || key == 'irrigation';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
     final border = OutlineInputBorder(
       borderSide: const BorderSide(color: Color(0xFF655B40), width: 2.0),
     );
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("NewTask", style: TextStyle(color: Colors.white)),
+        title: Text(
+          loc.newTaskTitle,
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: const Color(0xFF655B40),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -103,208 +155,174 @@ class _NewTaskFormState extends State<NewTaskForm> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(15.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Image.asset('assets/logo.png', height: 85, width: 85),
-                const Text(
-                  'Add new task',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(fontSize: 23, color: Color(0xFF655B40)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 25),
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  const Text(
-                    'Task',
-                    style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _taskController,
-                    readOnly: widget.taskName != 'Other',
-                    style: const TextStyle(color: Color(0xFF655B40)),
-                    decoration: InputDecoration(
-                      border: border,
-                      enabledBorder: border,
-                      focusedBorder: border,
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red, width: 2.0),
-                      ),
-                      hintText: 'Enter the task name',
-                      hintStyle: TextStyle(color: Color(0xFF655B40)),
-                    ),
-                    validator:
-                        (value) =>
-                            value!.isEmpty ? 'Please enter task name' : null,
-                  ),
-                  const SizedBox(height: 13),
-                  const Text(
-                    'Date',
-                    style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _dateController,
-                    style: const TextStyle(color: Color(0xFF655B40)),
-                    decoration: InputDecoration(
-                      border: border,
-                      enabledBorder: border,
-                      focusedBorder: border,
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red, width: 2.0),
-                      ),
-                      hintText: 'Enter the date',
-                      hintStyle: TextStyle(color: Color(0xFF655B40)),
-                    ),
-                    validator:
-                        (value) => value!.isEmpty ? 'Please enter date' : null,
-                  ),
-                  const SizedBox(height: 13),
-                  const Text(
-                    'Cost',
-                    style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _costController,
-                    style: const TextStyle(color: Color(0xFF655B40)),
-                    decoration: InputDecoration(
-                      border: border,
-                      enabledBorder: border,
-                      focusedBorder: border,
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red, width: 2.0),
-                      ),
-                      hintText: 'Enter the cost',
-                      hintStyle: TextStyle(color: Color(0xFF655B40)),
-                    ),
-                    validator:
-                        (value) => value!.isEmpty ? 'Please enter cost' : null,
-                  ),
-                  const SizedBox(height: 13),
-                  const Text(
-                    'Synthesis',
-                    style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _synthesisController,
-                    style: const TextStyle(color: Color(0xFF655B40)),
-                    decoration: InputDecoration(
-                      border: border,
-                      enabledBorder: border,
-                      focusedBorder: border,
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red, width: 2.0),
-                      ),
-                      hintText: 'Enter the synthesis',
-                      hintStyle: TextStyle(color: Color(0xFF655B40)),
-                    ),
-                    validator:
-                        (value) =>
-                            value!.isEmpty ? 'Please enter synthesis' : null,
-                  ),
-                  const SizedBox(height: 13),
-                  const Text(
-                    'Type',
-                    style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _typeController,
-                    style: const TextStyle(color: Color(0xFF655B40)),
-                    decoration: InputDecoration(
-                      border: border,
-                      enabledBorder: border,
-                      focusedBorder: border,
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red, width: 2.0),
-                      ),
-                      hintText: 'Enter the type',
-                      hintStyle: TextStyle(color: Color(0xFF655B40)),
-                    ),
-                    validator:
-                        (value) => value!.isEmpty ? 'Please enter type' : null,
-                  ),
-                  const SizedBox(height: 13),
-                  const Text(
-                    'NPK',
-                    style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _npkController,
-                    style: const TextStyle(color: Color(0xFF655B40)),
-                    decoration: InputDecoration(
-                      border: border,
-                      enabledBorder: border,
-                      focusedBorder: border,
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red, width: 2.0),
-                      ),
-                      hintText: 'Enter the NPK value',
-                      hintStyle: TextStyle(color: Color(0xFF655B40)),
-                    ),
-                    validator:
-                        (value) => value!.isEmpty ? 'Please enter NPK' : null,
-                  ),
-                  const SizedBox(height: 13),
-                  const Text(
-                    'Notes',
-                    style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _notesController,
-                    maxLines: 3,
-                    style: const TextStyle(color: Color(0xFF655B40)),
-                    decoration: InputDecoration(
-                      border: border,
-                      enabledBorder: border,
-                      focusedBorder: border,
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red, width: 2.0),
-                      ),
-                      hintText: 'Enter any notes',
-                      hintStyle: TextStyle(color: Color(0xFF655B40)),
-                    ),
-                    validator:
-                        (value) => value!.isEmpty ? 'Please enter notes' : null,
-                  ),
-                  const SizedBox(height: 40),
-                  Center(
-                    child: SizedBox(
-                      width: 250,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _submitForm,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF655B40),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text(
-                          'Add Task',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
-                        ),
-                      ),
+                  Image.asset('assets/logo.png', height: 85, width: 85),
+                  Text(
+                    loc.addNewTask,
+                    style: const TextStyle(
+                      fontSize: 23,
+                      color: Color(0xFF655B40),
                     ),
                   ),
-                  const SizedBox(height: 75),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 25),
+              _buildLabeledField(
+                label: loc.taskLabel,
+                controller: _taskController,
+                hintText: loc.enterTaskHint,
+                readOnly: _taskKey.toLowerCase() != 'other',
+                validator:
+                    (value) => value!.isEmpty ? loc.taskValidation : null,
+              ),
+              _buildDatePicker(loc),
+              _buildLabeledField(
+                label: loc.costLabel,
+                controller: _costController,
+                hintText: loc.enterCostHint,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator:
+                    (value) => value!.isEmpty ? loc.costValidation : null,
+              ),
+              if (!_hideSynthesisTypeNPK) ...[
+                _buildLabeledField(
+                  label: loc.synthesisLabel,
+                  controller: _synthesisController,
+                  hintText: loc.enterSynthesisHint,
+                ),
+                _buildLabeledField(
+                  label: loc.typeLabel,
+                  controller: _typeController,
+                  hintText: loc.enterTypeHint,
+                ),
+                _buildLabeledField(
+                  label: loc.npk,
+                  controller: _npkController,
+                  hintText: loc.enterNpkHint,
+                ),
+              ],
+              _buildLabeledField(
+                label: loc.notesLabel,
+                controller: _notesController,
+                hintText: loc.enterNotesHint,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 40),
+              Center(
+                child: SizedBox(
+                  width: 250,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF655B40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: Text(
+                      loc.addTaskButton,
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 75),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLabeledField({
+    required String label,
+    required TextEditingController controller,
+    required String hintText,
+    TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    final border = OutlineInputBorder(
+      borderSide: const BorderSide(color: Color(0xFF655B40), width: 2.0),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 18, color: Color(0xFF655B40)),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            readOnly: readOnly,
+            maxLines: maxLines,
+            style: const TextStyle(color: Color(0xFF655B40)),
+            decoration: InputDecoration(
+              border: border,
+              enabledBorder: border,
+              focusedBorder: border,
+              errorBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.red, width: 2.0),
+              ),
+              hintText: hintText,
+              hintStyle: const TextStyle(color: Color(0xFF655B40)),
+            ),
+            validator: validator,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatePicker(AppLocalizations loc) {
+    final border = OutlineInputBorder(
+      borderSide: const BorderSide(color: Color(0xFF655B40), width: 2.0),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            loc.dateLabel,
+            style: const TextStyle(fontSize: 18, color: Color(0xFF655B40)),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => _pickDate(context),
+            child: AbsorbPointer(
+              child: TextFormField(
+                controller: _dateController,
+                style: const TextStyle(color: Color(0xFF655B40)),
+                decoration: InputDecoration(
+                  hintText: loc.selectDateHint,
+                  hintStyle: const TextStyle(color: Color(0xFF655B40)),
+                  border: border,
+                  enabledBorder: border,
+                  focusedBorder: border,
+                ),
+                validator:
+                    (value) => value!.isEmpty ? loc.dateValidation : null,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

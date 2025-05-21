@@ -1,0 +1,355 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'user.dart';
+
+class NewTaskFormExpenses extends StatefulWidget {
+  final String taskName;
+  final User user;
+
+  const NewTaskFormExpenses({
+    super.key,
+    required this.taskName,
+    required this.user,
+  });
+
+  @override
+  State<NewTaskFormExpenses> createState() => _NewTaskFormExpensesState();
+}
+
+class _NewTaskFormExpensesState extends State<NewTaskFormExpenses> {
+  final _formKey = GlobalKey<FormState>();
+  final _taskController = TextEditingController();
+  final _dateController = TextEditingController();
+  final _costController = TextEditingController();
+  final _synthesisController = TextEditingController();
+  final _typeController = TextEditingController();
+  final _npkController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  DateTime? _selectedDate;
+  List<String> _fieldLocations = [];
+  String? _selectedFieldLocation;
+
+  late String _taskKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFields();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final loc = AppLocalizations.of(context)!;
+    _taskKey = _normalizeTaskKey(widget.taskName, loc);
+
+    if (_taskKey != 'other') {
+      _taskController.text = widget.taskName;
+    }
+  }
+
+  String _normalizeTaskKey(String taskName, AppLocalizations loc) {
+    final lower = taskName.toLowerCase();
+    if (lower == loc.irrigation.toLowerCase()) return 'irrigation';
+    if (lower == loc.fertilization.toLowerCase()) return 'fertilization';
+    if (lower == loc.spraying.toLowerCase()) return 'spraying';
+    if (lower == loc.other.toLowerCase()) return 'other';
+    return 'other';
+  }
+
+  bool get _hideSynthesisTypeNPK =>
+      _taskKey == 'irrigation' || _taskKey == 'other';
+
+  bool get _hideFieldSelection => _taskKey == 'other';
+
+  Future<void> _fetchFields() async {
+    final loc = AppLocalizations.of(context)!;
+    try {
+      final response = await http.post(
+        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getFields'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': widget.user.email}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final fields = List<Map<String, dynamic>>.from(data['fields']);
+        setState(() {
+          _fieldLocations =
+              fields.map((f) => f['location'].toString()).toList();
+          if (_fieldLocations.isNotEmpty) {
+            _selectedFieldLocation = _fieldLocations.first;
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(loc.failedToLoadFields)));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${loc.errorFetchingFields}: $e')));
+    }
+  }
+
+  Future<void> _pickDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _dateController.text =
+            '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
+    }
+  }
+
+  Future<void> _submitForm() async {
+    final loc = AppLocalizations.of(context)!;
+    if (_formKey.currentState!.validate()) {
+      try {
+        final expenseData = {
+          'task': _taskController.text,
+          'date': _dateController.text,
+          'cost': double.parse(_costController.text),
+          'synthesis': _hideSynthesisTypeNPK ? '' : _synthesisController.text,
+          'type': _hideSynthesisTypeNPK ? '' : _typeController.text,
+          'npk': _hideSynthesisTypeNPK ? '' : _npkController.text,
+          'notes': _notesController.text,
+          'location': _hideFieldSelection ? null : _selectedFieldLocation,
+        };
+
+        final response = await http.post(
+          Uri.parse(
+            'https://94b6-79-131-87-183.ngrok-free.app/api/addExpenseSeparate',
+          ),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'email': widget.user.email,
+            'expenseData': expenseData,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          Navigator.pop(context);
+        } else {
+          final responseBody = json.decode(response.body);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${loc.error}: ${responseBody['message']}')),
+          );
+        }
+      } catch (error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${loc.error}: ${error.toString()}')),
+        );
+      }
+    }
+  }
+
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller,
+    String hintText, {
+    TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
+    int maxLines = 1,
+    String? validator,
+  }) {
+    final border = OutlineInputBorder(
+      borderSide: const BorderSide(color: Color(0xFF655B40), width: 2.0),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 18, color: Color(0xFF655B40)),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            readOnly: readOnly,
+            maxLines: maxLines,
+            style: const TextStyle(color: Color(0xFF655B40)),
+            decoration: InputDecoration(
+              border: border,
+              enabledBorder: border,
+              focusedBorder: border,
+              errorBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.red, width: 2.0),
+              ),
+              hintText: hintText,
+              hintStyle: const TextStyle(color: Color(0xFF655B40)),
+            ),
+            validator:
+                (value) => value == null || value.isEmpty ? validator : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField(AppLocalizations loc) {
+    final border = OutlineInputBorder(
+      borderSide: const BorderSide(color: Color(0xFF655B40), width: 2.0),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            loc.date,
+            style: const TextStyle(fontSize: 18, color: Color(0xFF655B40)),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => _pickDate(context),
+            child: AbsorbPointer(
+              child: TextFormField(
+                controller: _dateController,
+                style: const TextStyle(color: Color(0xFF655B40)),
+                decoration: InputDecoration(
+                  hintText: loc.selectDate,
+                  hintStyle: const TextStyle(color: Color(0xFF655B40)),
+                  border: border,
+                  enabledBorder: border,
+                  focusedBorder: border,
+                ),
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty
+                            ? loc.dateValidation
+                            : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(loc.newTask, style: const TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFF655B40),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(15.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Image.asset('assets/logo.png', height: 85, width: 85),
+                  Text(
+                    loc.addNewTask,
+                    style: const TextStyle(
+                      fontSize: 23,
+                      color: Color(0xFF655B40),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 25),
+              if (!_hideFieldSelection)
+                _buildTextField(
+                  loc.field,
+                  TextEditingController(text: _selectedFieldLocation ?? ''),
+                  loc.selectField,
+                ),
+              _buildTextField(
+                loc.task,
+                _taskController,
+                loc.enterTaskName,
+                readOnly: _taskKey != 'other',
+                validator: loc.taskValidation,
+              ),
+              _buildDateField(loc),
+              _buildTextField(
+                loc.cost,
+                _costController,
+                loc.enterCost,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: loc.costValidation,
+              ),
+              if (!_hideSynthesisTypeNPK) ...[
+                _buildTextField(
+                  loc.synthesis,
+                  _synthesisController,
+                  loc.enterSynthesis,
+                  validator: loc.synthesisValidation,
+                ),
+                _buildTextField(
+                  loc.type,
+                  _typeController,
+                  loc.enterType,
+                  validator: loc.typeValidation,
+                ),
+                _buildTextField(
+                  loc.npk,
+                  _npkController,
+                  loc.enterNpk,
+                  validator: loc.npkValidation,
+                ),
+              ],
+              _buildTextField(
+                loc.notes,
+                _notesController,
+                loc.enterNotes,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 40),
+              Center(
+                child: SizedBox(
+                  width: 250,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF655B40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: Text(
+                      loc.addTask,
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 75),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

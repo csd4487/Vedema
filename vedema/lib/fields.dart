@@ -3,12 +3,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'addnewfield.dart';
-import 'userhomepage.dart';
+import 'expenses.dart';
 import 'separatefield.dart';
 import 'user.dart';
 import 'settings.dart';
 import 'voicecommands.dart';
 import 'analyticsdefault.dart';
+import 'editfieldform.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class FieldsScreen extends StatefulWidget {
   final User user;
@@ -39,7 +41,7 @@ class FieldsScreenState extends State<FieldsScreen> {
   Future<void> _loadFields() async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.2:5000/api/getFields'),
+        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getFields'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
       );
@@ -71,9 +73,13 @@ class FieldsScreenState extends State<FieldsScreen> {
       }
     } catch (error) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading fields: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${AppLocalizations.of(context)!.errorLoadingFields}: $error',
+          ),
+        ),
+      );
     }
   }
 
@@ -82,16 +88,16 @@ class FieldsScreenState extends State<FieldsScreen> {
       context: context,
       builder:
           (_) => AlertDialog(
-            title: const Text("Confirm Deletion"),
-            content: const Text("Are you sure you want to delete this field?"),
+            title: Text(AppLocalizations.of(context)!.confirmDeletion),
+            content: Text(AppLocalizations.of(context)!.confirmDeleteField),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text("Cancel"),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text("Yes"),
+                child: Text(AppLocalizations.of(context)!.yes),
               ),
             ],
           ),
@@ -105,7 +111,7 @@ class FieldsScreenState extends State<FieldsScreen> {
   Future<void> _deleteField(Field field) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.2:5000/api/deleteField'),
+        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/deleteField'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': widget.user.email,
@@ -122,21 +128,31 @@ class FieldsScreenState extends State<FieldsScreen> {
         setState(() {
           _fields.remove(field);
         });
-        print("Field deleted");
-      } else {
-        print("Failed to delete field");
       }
     } catch (e) {
       print("Delete error: $e");
     }
   }
 
+  Future<void> _editField(Field field) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => UpdateFieldScreen(user: widget.user, field: field),
+      ),
+    );
+    _loadFields();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF655B40),
-        title: const Text('Fields', style: TextStyle(color: Colors.white)),
+        title: Text(loc.fields, style: const TextStyle(color: Colors.white)),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -153,9 +169,7 @@ class FieldsScreenState extends State<FieldsScreen> {
               showDialog(
                 context: context,
                 barrierColor: Colors.black38,
-                builder:
-                    (BuildContext context) =>
-                        SettingsSidebar(user: widget.user),
+                builder: (_) => SettingsSidebar(user: widget.user),
               );
             },
           ),
@@ -171,10 +185,10 @@ class FieldsScreenState extends State<FieldsScreen> {
                   children: [
                     const SizedBox(height: 25),
                     _fields.isEmpty
-                        ? const Center(
+                        ? Center(
                           child: Text(
-                            'You do not have any fields yet, click the + button on the bottom right to add your fields',
-                            style: TextStyle(
+                            loc.noFieldsHint,
+                            style: const TextStyle(
                               fontSize: 18,
                               color: Color(0xFF655B40),
                             ),
@@ -195,7 +209,7 @@ class FieldsScreenState extends State<FieldsScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder:
-                                            (context) => SeparateFieldScreen(
+                                            (_) => SeparateFieldScreen(
                                               field: field,
                                               user: widget.user,
                                             ),
@@ -295,6 +309,18 @@ class FieldsScreenState extends State<FieldsScreen> {
                                           right: 0,
                                           child: IconButton(
                                             icon: Image.asset(
+                                              'assets/edit.png',
+                                              width: 25,
+                                              height: 25,
+                                            ),
+                                            onPressed: () => _editField(field),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: IconButton(
+                                            icon: Image.asset(
                                               'assets/delete.png',
                                               width: 25,
                                               height: 25,
@@ -338,27 +364,31 @@ class FieldsScreenState extends State<FieldsScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildNavItem('assets/field.png', 'Fields', () {
+            _buildNavItem('assets/field.png', loc.fields, () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FieldsScreen(user: widget.user),
+                  builder: (_) => FieldsScreen(user: widget.user),
                 ),
               );
             }),
-            _buildNavItem('assets/expensesfooter.png', 'Expenses', () {
+            _buildNavItem('assets/expensesfooter.png', loc.expenses, () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => UserHomePage(user: widget.user),
+                  builder: (_) => AllFieldsExpensesScreen(user: widget.user),
                 ),
               );
             }),
-            _buildNavItem('assets/stats.png', 'Analytics', () {
+            _buildNavItem('assets/stats.png', loc.analytics, () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => AnalyticsDefaultPage(user: widget.user),
+                  builder:
+                      (_) => AnalyticsDefaultPage(
+                        user: widget.user,
+                        analyticsType: 'default',
+                      ),
                 ),
               );
             }),

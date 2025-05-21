@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'signin.dart';
 import 'user.dart';
@@ -25,7 +26,7 @@ class SignUpScreenState extends State<SignUpScreen> {
     if (_formKey.currentState!.validate()) {
       try {
         final response = await http.post(
-          Uri.parse('http://192.168.1.2:5000/api/signup'),
+          Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/signup'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'firstname': user.firstname,
@@ -41,11 +42,11 @@ class SignUpScreenState extends State<SignUpScreen> {
           logger.i('User created successfully!');
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MyHomePage()),
+            MaterialPageRoute(builder: (context) => SignInScreen()),
           );
         } else if (response.statusCode == 409) {
           setState(() {
-            _emailError = 'Email already in use';
+            _emailError = AppLocalizations.of(context)!.emailInUse;
           });
         } else {
           logger.e('Error: ${response.body}');
@@ -68,9 +69,14 @@ class SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("SignUp", style: TextStyle(color: Colors.white)),
+        title: Text(
+          localizations.signUpTitle,
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: const Color(0xFF655B40),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
@@ -88,8 +94,8 @@ class SignUpScreenState extends State<SignUpScreen> {
               Row(
                 children: [
                   Image.asset('assets/logo.png', height: 85, width: 85),
-                  const Text(
-                    'Create your account',
+                  Text(
+                    localizations.createAccount,
                     textAlign: TextAlign.left,
                     style: TextStyle(fontSize: 23, color: Color(0xFF655B40)),
                   ),
@@ -101,8 +107,8 @@ class SignUpScreenState extends State<SignUpScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'First Name',
+                    Text(
+                      localizations.firstName,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
@@ -130,7 +136,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter your first name',
+                        hintText: localizations.enterFirstName,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                       ),
                       onChanged: (value) {
@@ -138,14 +144,14 @@ class SignUpScreenState extends State<SignUpScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Last Name',
+                    Text(
+                      localizations.lastName,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
@@ -173,7 +179,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter your last name',
+                        hintText: localizations.enterLastName,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                       ),
                       onChanged: (value) {
@@ -181,14 +187,14 @@ class SignUpScreenState extends State<SignUpScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Email',
+                    Text(
+                      localizations.email,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
@@ -216,7 +222,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter your email',
+                        hintText: localizations.enterEmail,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                         errorText: _emailError,
                       ),
@@ -228,18 +234,18 @@ class SignUpScreenState extends State<SignUpScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         } else if (!RegExp(
                           r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
                         ).hasMatch(value)) {
-                          return 'Enter a valid email.';
+                          return localizations.invalidEmail;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Password',
+                    Text(
+                      localizations.password,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
@@ -268,7 +274,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter your password',
+                        hintText: localizations.enterPassword,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -289,14 +295,14 @@ class SignUpScreenState extends State<SignUpScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Confirm Password',
+                    Text(
+                      localizations.confirmPassword,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
@@ -325,7 +331,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Re-Enter your password',
+                        hintText: localizations.reEnterPassword,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -347,9 +353,9 @@ class SignUpScreenState extends State<SignUpScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         } else if (value != user.password) {
-                          return 'Passwords do not match.';
+                          return localizations.passwordsDontMatch;
                         }
                         return null;
                       },
@@ -367,8 +373,8 @@ class SignUpScreenState extends State<SignUpScreen> {
                               borderRadius: BorderRadius.circular(30),
                             ),
                           ),
-                          child: const Text(
-                            'Sign Up',
+                          child: Text(
+                            localizations.signup,
                             style: TextStyle(color: Colors.white, fontSize: 18),
                           ),
                         ),
@@ -378,8 +384,8 @@ class SignUpScreenState extends State<SignUpScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          "Already have an account?",
+                        Text(
+                          localizations.alreadyHaveAccount,
                           style: TextStyle(
                             fontSize: 16,
                             color: Color(0xFF655B40),
@@ -394,8 +400,8 @@ class SignUpScreenState extends State<SignUpScreen> {
                               ),
                             );
                           },
-                          child: const Text(
-                            "Log in",
+                          child: Text(
+                            localizations.logIn,
                             style: TextStyle(
                               fontSize: 16,
                               color: Color(0xFF655B40),

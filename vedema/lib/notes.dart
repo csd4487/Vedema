@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'user.dart';
 import 'addnewnote.dart';
@@ -30,7 +31,7 @@ class _NotesPageState extends State<NotesPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.2:5000/api/getNotes'),
+        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getNotes'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
       );
@@ -55,7 +56,7 @@ class _NotesPageState extends State<NotesPage> {
           isLoading = false;
         });
       } else {
-        throw Exception('Failed to load notes');
+        throw Exception(AppLocalizations.of(context)!.failedToLoadNotes);
       }
     } catch (e) {
       print('Error: $e');
@@ -82,7 +83,7 @@ class _NotesPageState extends State<NotesPage> {
   Future<void> _sendEmail(dynamic note) async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/sendEmail'),
+        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/sendEmail'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': widget.user.email,
@@ -92,12 +93,12 @@ class _NotesPageState extends State<NotesPage> {
       );
 
       if (response.statusCode == 200) {
-        print("Email sent successfully.");
+        print(AppLocalizations.of(context)!.emailSent);
       } else {
-        print("Failed to send email.");
+        print(AppLocalizations.of(context)!.failedToSendEmail);
       }
     } catch (e) {
-      print("Error sending email: $e");
+      print("${AppLocalizations.of(context)!.errorSendingEmail}: $e");
     }
   }
 
@@ -106,16 +107,16 @@ class _NotesPageState extends State<NotesPage> {
       context: context,
       builder:
           (_) => AlertDialog(
-            title: const Text("Confirm Deletion"),
-            content: const Text("Are you sure you want to delete this note?"),
+            title: Text(AppLocalizations.of(context)!.confirmDeletion),
+            content: Text(AppLocalizations.of(context)!.deleteConfirmation),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text("Cancel"),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text("Yes"),
+                child: Text(AppLocalizations.of(context)!.yes),
               ),
             ],
           ),
@@ -129,7 +130,7 @@ class _NotesPageState extends State<NotesPage> {
   Future<void> _deleteNote(dynamic note) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.2:5000/api/deleteNote'),
+        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/deleteNote'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': widget.user.email,
@@ -142,20 +143,22 @@ class _NotesPageState extends State<NotesPage> {
         setState(() {
           notes.remove(note);
         });
-        print("Note deleted");
+        print(AppLocalizations.of(context)!.noteDeleted);
       } else {
-        print("Failed to delete note");
+        print(AppLocalizations.of(context)!.failedToDelete);
       }
     } catch (e) {
-      print("Delete error: $e");
+      print("${AppLocalizations.of(context)!.deleteError}: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notes", style: TextStyle(color: Colors.white)),
+        title: Text(localizations.notes, style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF655B40),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -166,11 +169,14 @@ class _NotesPageState extends State<NotesPage> {
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : notes.isEmpty
-              ? const Padding(
-                padding: EdgeInsets.only(top: 45),
+              ? Padding(
+                padding: const EdgeInsets.only(top: 45),
                 child: Text(
-                  'You do not have any notes yet, click the + button on the bottom right to add a note',
-                  style: TextStyle(color: Color(0xFF655B40), fontSize: 18),
+                  localizations.noNotesMessage,
+                  style: TextStyle(
+                    color: const Color(0xFF655B40),
+                    fontSize: 18,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               )
@@ -207,37 +213,12 @@ class _NotesPageState extends State<NotesPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(
-                                        right: 10.0,
-                                      ),
-                                      child: Text(
-                                        note['text'],
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Transform.translate(
-                                    offset: const Offset(10, -10),
-                                    child: IconButton(
-                                      icon: Image.asset(
-                                        'assets/delete.png',
-                                        width: 25,
-                                        height: 25,
-                                      ),
-                                      onPressed:
-                                          () =>
-                                              _confirmDeleteNote(context, note),
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                note['text'],
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                ),
                               ),
                               const SizedBox(height: 10),
                               Text(
@@ -245,6 +226,19 @@ class _NotesPageState extends State<NotesPage> {
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.bottomRight,
+                                child: IconButton(
+                                  icon: Image.asset(
+                                    'assets/delete.png',
+                                    width: 25,
+                                    height: 25,
+                                  ),
+                                  onPressed:
+                                      () => _confirmDeleteNote(context, note),
                                 ),
                               ),
                             ],

@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
-import 'signup.dart';
-import 'signin.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+import 'l10n/l10n.dart';
+import 'provider/language_provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+import 'welcome.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => LanguageProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -11,15 +21,44 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: MyHomePage());
+    final languageProvider = Provider.of<LanguageProvider>(context);
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      locale: languageProvider.locale,
+      supportedLocales: L10n.all,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: const MyHomePage(),
+    );
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
+  State<MyHomePage> createState() => _LanguageSelectionScreenState();
+}
+
+class _LanguageSelectionScreenState extends State<MyHomePage> {
+  late String _selectedLanguage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLanguage = 'English';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<LanguageProvider>(context);
+    final loc = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.only(top: 85.0),
@@ -29,47 +68,44 @@ class MyHomePage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset('assets/logo.png', height: 275, width: 275),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: const Text(
-                  'Welcome to Vedema, the ultimate app for olive producers. Track your harvest, manage your expenses, and streamline your production process with ease.',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(fontSize: 16, color: Color(0xFF655B40)),
-                ),
-              ),
               const SizedBox(height: 65),
-              SizedBox(
-                width: 250,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SignInScreen()),
-                    );
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: DropdownButtonFormField<String>(
+                  value: _selectedLanguage,
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    labelText: loc.selectLanguage,
+                  ),
+                  items:
+                      ['English', 'Ελληνικά'].map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedLanguage = newValue!;
+                    });
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF655B40),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
-                  child: const Text(
-                    'Log In',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
                 ),
               ),
-
               const SizedBox(height: 30),
               SizedBox(
                 width: 250,
                 child: ElevatedButton(
                   onPressed: () {
+                    if (_selectedLanguage == 'Ελληνικά') {
+                      provider.setLocale(const Locale('el'));
+                    } else {
+                      provider.setLocale(const Locale('en'));
+                    }
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => SignUpScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const WelcomePage(),
+                      ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -79,9 +115,9 @@ class MyHomePage extends StatelessWidget {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                   ),
-                  child: const Text(
-                    'Sign Up',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  child: Text(
+                    loc.submit,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ),
               ),

@@ -32,7 +32,6 @@ mongoose.connect(mongoURI, {
 .then(() => console.log('MongoDB connected successfully!'))
 .catch(err => console.error('MongoDB connection error:', err));
 
-//schemas
 const noteSchema = new mongoose.Schema({
   text: String,
   date: String,
@@ -49,16 +48,37 @@ const expenseSchema = new mongoose.Schema({
   notes: String,
 }, { _id: false });
 
-const profitSchema = new mongoose.Schema({
-  sacks: Number,
-  price: Number,
-}, { _id: false });
-
 const otherExpenseSchema = new mongoose.Schema({
   task: String,
   date: String,
   cost: Number,
   notes: String,
+}, { _id: false });
+
+
+const otherProfitSchema = new mongoose.Schema({
+  type: String,
+  date: String,
+  profitNo: Number,
+  notes: String,
+}, { _id: false });
+
+const sackProductionSchema = new mongoose.Schema({
+  sacks: Number,
+  dateProduced: String,
+}, { _id: false });
+
+const oilProductionSchema = new mongoose.Schema({
+  sacksUsed: Number,
+  oilKg: Number,
+  dateGrinded: String,
+}, { _id: false });
+
+const oilProfitSchema = new mongoose.Schema({
+  oilKgSold: Number,
+  pricePerKg: Number,
+  totalEarned: Number,
+  dateSold: String,
 }, { _id: false });
 
 const fieldSchema = new mongoose.Schema({
@@ -69,9 +89,13 @@ const fieldSchema = new mongoose.Schema({
   price: Number,
   species: String,
   expenses: [expenseSchema],
-  profits: [profitSchema],
-  totalExpenses: Number,
-  totalProfits: Number,
+  sackProductions: [sackProductionSchema],
+  oilProductions: [oilProductionSchema],
+  oilProfits: [oilProfitSchema],
+  totalExpenses: { type: Number, default: 0 },
+  totalProfits: { type: Number, default: 0 },
+  availableSacks: { type: Number, default: 0 },
+  oilKg: { type: Number, default: 0 },
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
@@ -80,13 +104,18 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true },
   password: { type: String, required: true },
   fields: [fieldSchema],
-  totalExpenses: Number,
-  totalProfits: Number,
-  otherExpenses: [otherExpenseSchema],
-  notes: [noteSchema],
+  totalExpenses: { type: Number, default: 0 },
+  totalProfits: { type: Number, default: 0 },
+  otherExpenses: { type: [otherExpenseSchema], default: [] },
+  otherProfits: { type: [otherProfitSchema], default: [] }, 
+  notes: { type: [noteSchema], default: [] },
 });
 
+module.exports = mongoose.model('User', userSchema);
+
+
 const User = mongoose.model('User', userSchema);
+
 
 
 app.get('/', (req, res) => {
@@ -96,10 +125,19 @@ app.get('/', (req, res) => {
 app.post('/api/signup', async (req, res) => {
   try {
     const { email, firstname, lastname, password } = req.body;
-    const existingUser = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase();
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) return res.status(409).json({ message: 'Email already in use' });
 
-    const newUser = new User({ firstname, lastname, email, password, fields: [] });
+    const newUser = new User({
+      firstname,
+      lastname,
+      email: normalizedEmail,
+      password,
+      fields: [],
+    });
+
     await newUser.save();
     res.status(201).json({ message: 'SignUp completed successfully!' });
   } catch (error) {
@@ -107,10 +145,13 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
+
 app.post('/api/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase();
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user || password !== user.password)
       return res.status(401).json({ message: 'Invalid email or password' });
 
@@ -126,6 +167,7 @@ app.post('/api/signin', async (req, res) => {
     res.status(500).json({ message: 'Error signing in', error: error.message });
   }
 });
+
 
 app.post('/api/addField', async (req, res) => {
   try {
@@ -159,9 +201,13 @@ app.post('/api/getFields', async (req, res) => {
 app.post('/api/addExpense', async (req, res) => {
   try {
     const { email, expenseData } = req.body;
-    const requiredFields = ['task', 'date', 'cost', 'synthesis', 'type', 'npk', 'notes', 'location'];
-    for (const field of requiredFields)
-      if (!expenseData[field]) return res.status(400).json({ message: `Missing: ${field}` });
+    const requiredFields = ['task', 'date', 'cost', 'location'];
+
+    for (const field of requiredFields) {
+      if (!expenseData[field]) {
+        return res.status(400).json({ message: `Missing: ${field}` });
+      }
+    }
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -169,9 +215,21 @@ app.post('/api/addExpense', async (req, res) => {
     const field = user.fields.find(f => f.location === expenseData.location);
     if (!field) return res.status(404).json({ message: 'Field not found' });
 
-    field.expenses.push({ ...expenseData });
-    field.totalExpenses += Number(expenseData.cost);
-    user.totalExpenses += Number(expenseData.cost);
+
+    const expenseToAdd = {
+      task: expenseData.task,
+      date: expenseData.date,
+      cost: Number(expenseData.cost),
+      location: expenseData.location,
+      synthesis: expenseData.synthesis || '',
+      type: expenseData.type || '',
+      npk: expenseData.npk || '',
+      notes: expenseData.notes || '',
+    };
+
+    field.expenses.push(expenseToAdd);
+    field.totalExpenses = (field.totalExpenses || 0) + expenseToAdd.cost;
+    user.totalExpenses = (user.totalExpenses || 0) + expenseToAdd.cost;
 
     await user.save();
     res.status(200).json({ message: 'Expense added successfully' });
@@ -179,6 +237,66 @@ app.post('/api/addExpense', async (req, res) => {
     res.status(500).json({ message: 'Error adding expense', error: error.message });
   }
 });
+
+
+app.post('/api/addExpenseSeparate', async (req, res) => {
+  try {
+    const { email, expenseData } = req.body;
+    const requiredFields = ['task', 'date', 'cost'];
+
+    for (const field of requiredFields) {
+      if (!expenseData[field]) {
+        return res.status(400).json({ message: `Missing: ${field}` });
+      }
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isOtherExpense = !expenseData.location || expenseData.location.trim() === '';
+
+    if (isOtherExpense) {
+
+      const otherExpenseToAdd = {
+        task: expenseData.task,
+        date: expenseData.date,
+        cost: Number(expenseData.cost),
+        notes: expenseData.notes || '',
+      };
+
+      user.otherExpenses.push(otherExpenseToAdd);
+      user.totalExpenses = (user.totalExpenses || 0) + otherExpenseToAdd.cost;
+
+      await user.save();
+      return res.status(200).json({ message: 'Other expense added successfully' });
+    }
+
+
+    const field = user.fields.find(f => f.location === expenseData.location);
+    if (!field) return res.status(404).json({ message: 'Field not found' });
+
+    const expenseToAdd = {
+      task: expenseData.task,
+      date: expenseData.date,
+      cost: Number(expenseData.cost),
+      location: expenseData.location,
+      synthesis: expenseData.synthesis || '',
+      type: expenseData.type || '',
+      npk: expenseData.npk || '',
+      notes: expenseData.notes || '',
+    };
+
+    field.expenses.push(expenseToAdd);
+    field.totalExpenses = (field.totalExpenses || 0) + expenseToAdd.cost;
+    user.totalExpenses = (user.totalExpenses || 0) + expenseToAdd.cost;
+
+    await user.save();
+    res.status(200).json({ message: 'Expense added successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding expense', error: error.message });
+  }
+});
+
 
 app.post('/api/getSingleField', async (req, res) => {
   const { email, location } = req.body;
@@ -334,6 +452,62 @@ app.post('/api/deleteField', async (req, res) => {
   }
 });
 
+function parseCustomDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return new Date('Invalid');
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return new Date('Invalid');
+
+  const [day, month, year] = parts;
+  return new Date(`${year}-${month}-${day}`);
+}
+
+
+
+
+
+
+
+app.post('/api/getAvailablePeriods', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const allDates = [];
+
+    user.fields.forEach(field => {
+      field.expenses?.forEach(exp => allDates.push(new Date(exp.date)));
+      field.profits?.forEach(profit => allDates.push(new Date(profit.date)));
+    });
+
+    user.otherExpenses?.forEach(exp => allDates.push(new Date(exp.date)));
+
+    const periods = new Set();
+
+    allDates.forEach(date => {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+
+      const startYear = month >= 9 ? year : year - 1;
+      const endYear = startYear + 1;
+
+      periods.add(`${startYear}-${endYear}`);
+    });
+
+    const sortedPeriods = Array.from(periods).sort((a, b) => {
+      const [aStart] = a.split('-').map(Number);
+      const [bStart] = b.split('-').map(Number);
+      return bStart - aStart;
+    });
+
+    res.status(200).json({ periods: sortedPeriods });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching periods', error: error.message });
+  }
+});
+
 
 app.post('/api/getDefaultAnalytics', async (req, res) => {
   try {
@@ -348,6 +522,12 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
       Other: 0,
     };
 
+    const profitSummary = {
+      OilSales: 0,
+      SackSales: 0,
+      Other: 0,
+    };
+
     let fieldMostExpenses = '';
     let maxExpenses = 0;
     let fieldExpenseBreakdown = {};
@@ -355,8 +535,14 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
     let fieldMostProfits = '';
     let maxProfits = 0;
     let sacksOfTopField = 0;
+    let oilKgOfTopField = 0;
 
-    // Process all fields
+    const fieldExpenseDetails = {};
+    const fieldProfitDetails = {};
+
+    const seasonStart = new Date('2024-09-01');
+    const seasonEnd = new Date('2025-08-31');
+
     user.fields.forEach(field => {
       let fieldExpenses = 0;
       const taskBreakdown = {
@@ -366,71 +552,1079 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
         Other: 0,
       };
 
-      // Calculate field expenses
-      field.expenses.forEach(expense => {
-        const cost = expense.cost;
-        fieldExpenses += cost;
+      fieldExpenseDetails[field.location] = {
+        Fertilization: 0,
+        Spraying: 0,
+        Irrigation: 0,
+        Other: 0,
+      };
 
-        if (expense.task === 'Fertilization') {
-          expenseSummary.Fertilization += cost;
-          taskBreakdown.Fertilization += cost;
-        } else if (expense.task === 'Spraying') {
-          expenseSummary.Spraying += cost;
-          taskBreakdown.Spraying += cost;
-        } else if (expense.task === 'Irrigation') {
-          expenseSummary.Irrigation += cost;
-          taskBreakdown.Irrigation += cost;
-        } else {
-          expenseSummary.Other += cost;
-          taskBreakdown.Other += cost;
+      fieldProfitDetails[field.location] = {
+        oilSold: 0,
+        sacksSold: 0,
+        otherProfits: 0
+      };
+
+      field.expenses.forEach(expense => {
+        const expenseDate = new Date(expense.date);
+        if (isNaN(expenseDate)) return;
+
+        if (expenseDate >= seasonStart && expenseDate <= seasonEnd) {
+          const cost = parseFloat(expense.cost) || 0;
+          fieldExpenses += cost;
+
+          if (expense.task === 'Fertilization') {
+            expenseSummary.Fertilization += cost;
+            taskBreakdown.Fertilization += cost;
+            fieldExpenseDetails[field.location].Fertilization += cost;
+          } else if (expense.task === 'Spraying') {
+            expenseSummary.Spraying += cost;
+            taskBreakdown.Spraying += cost;
+            fieldExpenseDetails[field.location].Spraying += cost;
+          } else if (expense.task === 'Irrigation') {
+            expenseSummary.Irrigation += cost;
+            taskBreakdown.Irrigation += cost;
+            fieldExpenseDetails[field.location].Irrigation += cost;
+          } else {
+            expenseSummary.Other += cost;
+            taskBreakdown.Other += cost;
+            fieldExpenseDetails[field.location].Other += cost;
+          }
         }
       });
 
-      // field with most expenses
       if (fieldExpenses > maxExpenses || fieldMostExpenses === '') {
         maxExpenses = fieldExpenses;
         fieldMostExpenses = field.location;
         fieldExpenseBreakdown = taskBreakdown;
       }
 
-      // Calculate profits 
       let fieldProfits = 0;
       let sacks = 0;
-      field.profits.forEach(p => {
-        fieldProfits += p.price * p.sacks;
-        sacks += p.sacks;
-      });
+      let oilKg = 0;
+
+      if (Array.isArray(field.oilProfits)) {
+        field.oilProfits.forEach(p => {
+          const profitDate = new Date(p.dateSold);
+          if (isNaN(profitDate)) return;
+
+          if (profitDate >= seasonStart && profitDate <= seasonEnd) {
+            const total = (parseFloat(p.oilKgSold) || 0) * (parseFloat(p.pricePerKg) || 0);
+            fieldProfits += total;
+            oilKg += parseFloat(p.oilKgSold) || 0;
+            profitSummary.OilSales += total;
+            fieldProfitDetails[field.location].oilSold += parseFloat(p.oilKgSold) || 0;
+          }
+        });
+      }
+
+      if (Array.isArray(field.sackProfits)) {
+        field.sackProfits.forEach(p => {
+          const profitDate = new Date(p.date);
+          if (isNaN(profitDate)) return;
+
+          if (profitDate >= seasonStart && profitDate <= seasonEnd) {
+            const total = (parseInt(p.sacks) || 0) * (parseFloat(p.price) || 0);
+            fieldProfits += total;
+            sacks += parseInt(p.sacks) || 0;
+            profitSummary.SackSales += total;
+            fieldProfitDetails[field.location].sacksSold += parseInt(p.sacks) || 0;
+          }
+        });
+      }
 
       if (fieldProfits > maxProfits || fieldMostProfits === '') {
         maxProfits = fieldProfits;
         fieldMostProfits = field.location;
         sacksOfTopField = sacks;
+        oilKgOfTopField = oilKg;
       }
     });
 
-    // Process other expenses
     user.otherExpenses.forEach(other => {
-      expenseSummary.Other += other.cost;
+      const otherDate = new Date(other.date);
+      if (isNaN(otherDate)) return;
+
+      if (otherDate >= seasonStart && otherDate <= seasonEnd) {
+        expenseSummary.Other += parseFloat(other.cost) || 0;
+      }
+    });
+
+    user.otherProfits.forEach(other => {
+      const otherDate = new Date(other.date);
+      if (isNaN(otherDate)) return;
+
+      if (otherDate >= seasonStart && otherDate <= seasonEnd) {
+        const profit = parseFloat(other.profitNo) || 0;
+        profitSummary.Other += profit;
+        if (other.fieldLocation && fieldProfitDetails[other.fieldLocation]) {
+          fieldProfitDetails[other.fieldLocation].otherProfits += profit;
+        }
+      }
     });
 
     res.status(200).json({
       expenseSummary,
+      profitSummary,
       fieldWithMostExpenses: fieldMostExpenses || 'No fields',
       maxExpenses,
       expenseBreakdown: fieldExpenseBreakdown,
       fieldWithMostProfits: fieldMostProfits || 'No fields',
       maxProfits,
       sacksSold: sacksOfTopField,
+      oilKgSold: oilKgOfTopField,
+      totalExpenses: Object.values(expenseSummary).reduce((a, b) => a + b, 0),
+      totalProfits: Object.values(profitSummary).reduce((a, b) => a + b, 0),
+      netProfit: Object.values(profitSummary).reduce((a, b) => a + b, 0) - 
+                Object.values(expenseSummary).reduce((a, b) => a + b, 0),
+      fieldExpenseDetails,
+      fieldProfitDetails
     });
   } catch (error) {
+    res.status(500).json({
+      message: 'Error generating analytics',
+      error: error.message,
+    });
+  }
+});
+
+app.post('/api/getFilteredAnalytics', async (req, res) => {
+  try {
+    const { email, period, viewType, selectedTasks, selectedFields } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const [startYear, endYear] = period.split('-').map(Number);
+    const seasonStart = new Date(`${startYear}-09-01`);
+    const seasonEnd = new Date(`${endYear}-08-31`);
+
+
+    const expenseSummary = {
+      Fertilization: 0,
+      Spraying: 0,
+      Irrigation: 0,
+      Other: 0
+    };
+    const profitSummary = {
+      OilSales: 0,
+      SackSales: 0,
+      Other: 0
+    };
+
+    let fieldMostExpenses = '';
+    let maxExpenses = 0;
+    let fieldExpenseBreakdown = {};
+    let fieldMostProfits = '';
+    let maxProfits = 0;
+    let sacksOfTopField = 0;
+    let oilKgOfTopField = 0;
+
+    const fieldExpenseDetails = {};
+    const fieldProfitDetails = {};
+
+
+    const fieldsToProcess = selectedFields && selectedFields.length > 0
+      ? user.fields.filter(field => selectedFields.includes(field.location))
+      : user.fields;
+
+    fieldsToProcess.forEach(field => {
+
+      fieldExpenseDetails[field.location] = {
+        Fertilization: 0,
+        Spraying: 0,
+        Irrigation: 0,
+        Other: 0
+      };
+      
+      fieldProfitDetails[field.location] = {
+        oilSold: 0,
+        sacksSold: 0,
+        otherProfits: 0
+      };
+
+
+      let fieldExpenses = 0;
+      const taskBreakdown = {
+        Fertilization: 0,
+        Spraying: 0,
+        Irrigation: 0,
+        Other: 0
+      };
+
+      field.expenses.forEach(expense => {
+        const expenseDate = new Date(expense.date);
+        if (expenseDate >= seasonStart && expenseDate <= seasonEnd) {
+          const cost = parseFloat(expense.cost) || 0;
+          fieldExpenses += cost;
+
+          switch (expense.task) {
+            case 'Fertilization':
+              expenseSummary.Fertilization += cost;
+              taskBreakdown.Fertilization += cost;
+              fieldExpenseDetails[field.location].Fertilization += cost;
+              break;
+            case 'Spraying':
+              expenseSummary.Spraying += cost;
+              taskBreakdown.Spraying += cost;
+              fieldExpenseDetails[field.location].Spraying += cost;
+              break;
+            case 'Irrigation':
+              expenseSummary.Irrigation += cost;
+              taskBreakdown.Irrigation += cost;
+              fieldExpenseDetails[field.location].Irrigation += cost;
+              break;
+            default:
+              expenseSummary.Other += cost;
+              taskBreakdown.Other += cost;
+              fieldExpenseDetails[field.location].Other += cost;
+          }
+        }
+      });
+
+
+      if (fieldExpenses > maxExpenses || fieldMostExpenses === '') {
+        maxExpenses = fieldExpenses;
+        fieldMostExpenses = field.location;
+        fieldExpenseBreakdown = taskBreakdown;
+      }
+
+
+      let fieldProfits = 0;
+      let sacks = 0;
+      let oilKg = 0;
+
+
+      if (Array.isArray(field.oilProfits)) {
+        field.oilProfits.forEach(p => {
+          const profitDate = new Date(p.dateSold);
+          if (profitDate >= seasonStart && profitDate <= seasonEnd) {
+            const total = (parseFloat(p.oilKgSold) || 0) * (parseFloat(p.pricePerKg) || 0);
+            fieldProfits += total;
+            oilKg += parseFloat(p.oilKgSold) || 0;
+            profitSummary.OilSales += total;
+            fieldProfitDetails[field.location].oilSold += parseFloat(p.oilKgSold) || 0;
+          }
+        });
+      }
+
+
+      if (Array.isArray(field.sackProfits)) {
+        field.sackProfits.forEach(p => {
+          const profitDate = new Date(p.date);
+          if (profitDate >= seasonStart && profitDate <= seasonEnd) {
+            const total = (parseInt(p.sacks) || 0) * (parseFloat(p.price) || 0);
+            fieldProfits += total;
+            sacks += parseInt(p.sacks) || 0;
+            profitSummary.SackSales += total;
+            fieldProfitDetails[field.location].sacksSold += parseInt(p.sacks) || 0;
+          }
+        });
+      }
+
+
+      if (fieldProfits > maxProfits || fieldMostProfits === '') {
+        maxProfits = fieldProfits;
+        fieldMostProfits = field.location;
+        sacksOfTopField = sacks;
+        oilKgOfTopField = oilKg;
+      }
+    });
+
+
+    if (viewType === 'Both' || viewType === 'Expenses') {
+      user.otherExpenses.forEach(other => {
+        const otherDate = new Date(other.date);
+        if (otherDate >= seasonStart && otherDate <= seasonEnd) {
+          expenseSummary.Other += parseFloat(other.cost) || 0;
+        }
+      });
+    }
+
+
+    if (viewType === 'Both' || viewType === 'Profits') {
+      user.otherProfits.forEach(other => {
+        const otherDate = new Date(other.date);
+        if (otherDate >= seasonStart && otherDate <= seasonEnd) {
+          const profit = parseFloat(other.profitNo) || 0;
+          profitSummary.Other += profit;
+          if (other.fieldLocation && fieldProfitDetails[other.fieldLocation]) {
+            fieldProfitDetails[other.fieldLocation].otherProfits += profit;
+          }
+        }
+      });
+    }
+
+
+    const filteredExpenseSummary = (viewType === 'Profits') ? null : expenseSummary;
+    const filteredProfitSummary = (viewType === 'Expenses') ? null : profitSummary;
+    
+
+    const filteredFieldExpenseDetails = {};
+    const filteredFieldProfitDetails = {};
+    
+    const fieldsToInclude = selectedFields && selectedFields.length > 0 
+      ? selectedFields 
+      : user.fields.map(f => f.location);
+
+    fieldsToInclude.forEach(location => {
+      if (fieldExpenseDetails[location]) {
+        filteredFieldExpenseDetails[location] = fieldExpenseDetails[location];
+      }
+      if (fieldProfitDetails[location]) {
+        filteredFieldProfitDetails[location] = fieldProfitDetails[location];
+      }
+    });
+
+
+    const totalExpenses = filteredExpenseSummary 
+      ? Object.values(filteredExpenseSummary).reduce((a, b) => a + b, 0)
+      : null;
+      
+    const totalProfits = filteredProfitSummary
+      ? Object.values(filteredProfitSummary).reduce((a, b) => a + b, 0)
+      : null;
+      
+    const netProfit = (viewType === 'Both' && totalExpenses !== null && totalProfits !== null)
+      ? totalProfits - totalExpenses
+      : null;
+
+    res.status(200).json({
+      expenseSummary: filteredExpenseSummary,
+      profitSummary: filteredProfitSummary,
+      fieldWithMostExpenses: viewType === 'Profits' ? null : fieldMostExpenses || 'No fields',
+      maxExpenses: viewType === 'Profits' ? null : maxExpenses,
+      expenseBreakdown: viewType === 'Profits' ? null : fieldExpenseBreakdown,
+      fieldWithMostProfits: viewType === 'Expenses' ? null : fieldMostProfits || 'No fields',
+      maxProfits: viewType === 'Expenses' ? null : maxProfits,
+      sacksSold: viewType === 'Expenses' ? null : sacksOfTopField,
+      oilKgSold: viewType === 'Expenses' ? null : oilKgOfTopField,
+      totalExpenses,
+      totalProfits,
+      netProfit,
+      fieldExpenseDetails: viewType === 'Profits' ? null : filteredFieldExpenseDetails,
+      fieldProfitDetails: viewType === 'Expenses' ? null : filteredFieldProfitDetails
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching filtered analytics', error: error.message });
+  }
+});
+
+
+app.post('/api/addFieldSacks', async (req, res) => {
+  try {
+    const { email, sackData } = req.body;
+    const { location, sacks, date } = sackData;
+
+    if (!email || !location || sacks == null || !date) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const field = user.fields.find(f => f.location === location);
+    if (!field) return res.status(404).json({ message: 'Field not found' });
+
+
+    field.sackProductions.push({ sacks, dateProduced: date });
+
+
+    field.availableSacks = (field.availableSacks || 0) + sacks;
+
+    await user.save();
+
+    res.status(200).json({ message: 'Sacks added successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding sacks', error: error.message });
+  }
+});
+
+
+
+
+app.post('/api/getAvailableSacks', async (req, res) => {
+  try {
+    const { email, location } = req.body;
+
+    if (!email || !location) {
+      return res.status(400).json({ message: 'Missing email or location' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const field = user.fields.find(f => f.location === location);
+    if (!field) return res.status(404).json({ message: 'Field not found' });
+
+    res.status(200).json({
+      availableSacks: field.availableSacks,
+      harvestDates: field.sackProductions.map(sp => sp.dateProduced),
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving available sacks', error: error.message });
+  }
+});
+
+
+app.post('/api/grindSacks', async (req, res) => {
+  try {
+    const { email, location, sacksToGrind, oilKg, date } = req.body;
+
+    if (!email || !location || sacksToGrind == null || oilKg == null || !date) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const field = user.fields.find(f => f.location === location);
+    if (!field) return res.status(404).json({ message: 'Field not found' });
+
+    if ((field.availableSacks || 0) < sacksToGrind) {
+      return res.status(400).json({ message: 'Not enough sacks to grind' });
+    }
+
+
+    field.availableSacks -= sacksToGrind;
+
+
+    field.oilKg = (field.oilKg || 0) + oilKg;
+
+
+    field.oilProductions.push({
+      sacksUsed: sacksToGrind,
+      oilKg,
+      dateGrinded: date,
+    });
+
+    await user.save();
+
+    res.status(200).json({ message: 'Sacks ground into oil successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error grinding sacks', error: error.message });
+  }
+});
+
+
+
+
+app.post('/api/getAvailableOil', async (req, res) => {
+  try {
+    const { email, location } = req.body;
+
+    if (!email || !location) {
+      return res.status(400).json({ message: 'Missing email or location' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const field = user.fields.find(f => f.location === location);
+    if (!field) return res.status(404).json({ message: 'Field not found' });
+
+    res.status(200).json({
+      availableOilKg: field.oilKg,
+      grindDates: field.oilProductions.map(op => op.dateGrinded),
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving available oil', error: error.message });
+  }
+});
+
+
+app.post('/api/addSale', async (req, res) => {
+  try {
+    const { email, location, oilKgSold, pricePerKg, dateSold } = req.body;
+    console.log('oilKgSold:', oilKgSold, 'pricePerKg:', pricePerKg);
+    
+    if (!email || !location || !oilKgSold || !pricePerKg || !dateSold) {
+      console.log('Status: 400');
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log('Status: 404 - User not found');
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const fieldIndex = user.fields.findIndex(f => f.location === location);
+    if (fieldIndex === -1) {
+      console.log('Status: 404 - Field not found');
+      return res.status(404).json({ message: 'Field not found' });
+    }
+
+    const totalEarned = oilKgSold * pricePerKg;
+
+    const newSale = {
+      oilKgSold,
+      pricePerKg,
+      totalEarned,
+      dateSold,
+    };
+
+    user.fields[fieldIndex].oilProfits.push(newSale);
+    user.fields[fieldIndex].totalProfits += totalEarned;
+    user.totalProfits += totalEarned;
+
+    await user.save();
+    
+    console.log('Status: 200 - Sale recorded successfully');
+    res.status(200).json({ 
+      message: 'Sale recorded successfully',
+      totalProfits: user.totalProfits
+    });
+  } catch (error) {
+    console.log('Status: 500 - Error recording sale:', error.message);
     res.status(500).json({ 
-      message: 'Error generating analytics', 
+      message: 'Error recording sale', 
       error: error.message 
     });
   }
 });
 
 
+
+app.post('/api/removeOil', async (req, res) => {
+  try {
+    const { email, location, oilKgToRemove } = req.body;
+    
+    if (!email || !location || !oilKgToRemove) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const fieldIndex = user.fields.findIndex(f => f.location === location);
+    if (fieldIndex === -1) {
+      return res.status(404).json({ message: 'Field not found' });
+    }
+
+    if (user.fields[fieldIndex].oilKg < oilKgToRemove) {
+      return res.status(400).json({ message: 'Not enough oil available' });
+    }
+
+    user.fields[fieldIndex].oilKg -= oilKgToRemove;
+
+    await user.save();
+
+    res.status(200).json({ 
+      message: 'Oil removed successfully',
+      remainingOil: user.fields[fieldIndex].oilKg
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error removing oil', 
+      error: error.message 
+    });
+  }
+});
+
+
+
+app.post('/api/getProfitHistory', async (req, res) => {
+  try {
+    const { email, location } = req.body;
+
+
+    if (!email || !location) {
+      return res.status(400).json({ message: 'Missing email or location' });
+    }
+
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+
+    const field = user.fields.find(f => f.location === location);
+    if (!field) return res.status(404).json({ message: 'Field not found' });
+
+
+    const history = [];
+
+
+    field.sackProductions.forEach(production => {
+      if (production.sacks > 0) {
+        history.push({
+          type: 'sacks',
+          date: production.dateProduced || 'No date',
+          sacks: production.sacks,
+        });
+      }
+    });
+
+  
+    field.oilProductions.forEach(production => {
+      if (production.oilKg > 0) {
+        history.push({
+          type: 'grind',
+          date: production.dateGrinded || 'No date',
+          sacksUsed: production.sacksUsed,
+          oilKg: production.oilKg,
+        });
+      }
+    });
+
+
+    field.oilProfits.forEach(sale => {
+      if (sale.oilKgSold > 0) {
+        history.push({
+          type: 'sale',
+          date: sale.dateSold || 'No date',
+          oilKg: sale.oilKgSold,
+          pricePerKg: sale.pricePerKg,
+          totalEarned: sale.totalEarned,
+        });
+      }
+    });
+
+
+    res.status(200).json({ history });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error retrieving history', error: error.message });
+  }
+});
+
+
+app.post('/api/deleteProfit', async (req, res) => {
+  try {
+    const { email, location, type, date, oilKg, sacks } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const oilKgNum = Number(oilKg);
+    const sacksNum = Number(sacks);
+
+    user.fields = user.fields.map(field => {
+      if (field.location === location) {
+        if (type === 'grind' && Array.isArray(field.oilProductions)) {
+
+          field.oilProductions = field.oilProductions.filter(p => !(p.dateGrinded === date && p.oilKg === oilKgNum));
+        } else if (type === 'sacks' && Array.isArray(field.sackProductions)) {
+          field.sackProductions = field.sackProductions.filter(p => !(p.dateProduced === date && p.sacks === sacksNum));
+        }
+      }
+      return field;
+    });
+
+    await user.save();
+    res.status(200).json({ message: 'Profit deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting profit:', error);
+    res.status(500).json({ message: 'Error deleting profit', error: error.message });
+  }
+});
+
+app.post('/api/deleteSale', async (req, res) => {
+  try {
+    const { email, location, date, oilKg } = req.body;
+    
+
+    if (!email || !location || !date || !oilKg) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+
+    const field = user.fields.find(f => f.location === location);
+    if (!field) return res.status(404).json({ message: 'Field not found' });
+
+
+    const saleIndex = field.oilProfits.findIndex(
+      s => s.dateSold === date && s.oilKgSold === oilKg
+    );
+
+    if (saleIndex === -1) {
+      return res.status(404).json({ message: 'Sale not found' });
+    }
+
+
+    field.oilProfits.splice(saleIndex, 1);
+    field.oilKg += parseFloat(oilKg); 
+
+    await user.save();
+    res.status(200).json({ message: 'Sale deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting sale:', error);
+    res.status(500).json({ 
+      message: 'Error deleting sale', 
+      error: error.message 
+    });
+  }
+});
+
+
+
+app.post('/api/deleteExpense', async (req, res) => {
+  try {
+    const { email, location, date, task, cost } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.fields = user.fields.map(field => {
+      if (field.location === location && Array.isArray(field.expenses)) {
+        field.expenses = field.expenses.filter(e => !(e.date === date && e.task === task && e.cost === cost));
+      }
+      return field;
+    });
+
+    await user.save();
+    res.status(200).json({ message: 'Expense deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    res.status(500).json({ message: 'Error deleting expense', error: error.message });
+  }
+});
+
+
+app.post('/api/updateField', async (req, res) => {
+  const { email, field } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const fieldIndex = user.fields.findIndex(f => f.location === field.location);
+    if (fieldIndex === -1) return res.status(404).json({ message: 'Field not found' });
+
+
+    user.fields[fieldIndex].size = field.size;
+    user.fields[fieldIndex].oliveNo = field.oliveNo;
+    user.fields[fieldIndex].species = field.species;
+    user.fields[fieldIndex].cubics = field.cubics;
+    user.fields[fieldIndex].price = field.price;
+
+    await user.save();
+
+    res.send({ message: 'Field updated successfully' });
+  } catch (err) {
+    console.error('Error updating field:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+
+app.post('/api/getTotalAvailableSacks', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const totalSacks = user.fields.reduce((sum, field) => sum + field.availableSacks, 0);
+    res.status(200).json({ totalAvailableSacks: totalSacks });
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving total sacks', error: error.message });
+  }
+});
+
+
+app.post('/api/getTotalAvailableOil', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const totalOil = user.fields.reduce((sum, field) => sum + field.oilKg, 0);
+    res.status(200).json({ totalAvailableOilKg: totalOil });
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving total oil', error: error.message });
+  }
+});
+
+
+app.post('/api/getOtherProfits', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.status(200).json({ 
+      otherProfits: user.otherProfits 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error retrieving other profits', 
+      error: error.message 
+    });
+  }
+});
+
+
+app.post('/api/getAllProfitHistory', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const history = [];
+
+
+    user.fields.forEach(field => {
+
+      field.sackProductions.forEach(production => {
+        if (production.sacks > 0) {
+          history.push({
+            location: field.location,
+            type: 'sacks',
+            date: production.dateProduced || 'No date',
+            sacks: production.sacks,
+          });
+        }
+      });
+
+
+      field.oilProductions.forEach(production => {
+        if (production.oilKg > 0) {
+          history.push({
+            location: field.location,
+            type: 'grind',
+            date: production.dateGrinded || 'No date',
+            sacksUsed: production.sacksUsed,
+            oilKg: production.oilKg,
+          });
+        }
+      });
+
+
+      field.oilProfits.forEach(sale => {
+        if (sale.oilKgSold > 0) {
+          history.push({
+            location: field.location,
+            type: 'sale',
+            date: sale.dateSold || 'No date',
+            oilKg: sale.oilKgSold,
+            pricePerKg: sale.pricePerKg,
+            totalEarned: sale.totalEarned,
+          });
+        }
+      });
+    });
+
+
+    user.otherProfits.forEach(profit => {
+      history.push({
+        type: 'other',
+        location: 'General',
+        profitType: profit.type,
+        date: profit.date || 'No date',
+        profitNo: profit.profitNo,
+        notes: profit.notes,
+      });
+    });
+
+
+    history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.status(200).json({ history });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error retrieving profit history', 
+      error: error.message 
+    });
+  }
+});
+
+
+app.post('/api/getOtherExpenses', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      otherExpenses: user.otherExpenses || [],
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error fetching other expenses',
+      error: error.message 
+    });
+  }
+});
+
+
+app.post('/api/getAllHistory', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const history = [];
+
+
+    user.fields.forEach(field => {
+      field.expenses.forEach(expense => {
+        history.push({
+          type: 'expense',
+          location: field.location,
+          task: expense.task,
+          date: expense.date,
+          cost: expense.cost,
+          synthesis: expense.synthesis,
+          notes: expense.notes,
+          isOther: false,
+        });
+      });
+    });
+
+
+    user.otherExpenses.forEach(expense => {
+      history.push({
+        type: 'expense',
+        location: 'General',
+        task: expense.task,
+        date: expense.date,
+        cost: expense.cost,
+        notes: expense.notes,
+        isOther: true,
+      });
+    });
+
+
+    user.fields.forEach(field => {
+      field.sackProductions.forEach(production => {
+        if (production.sacks > 0) {
+          history.push({
+            type: 'sacks',
+            location: field.location,
+            date: production.dateProduced || 'No date',
+            sacks: production.sacks,
+          });
+        }
+      });
+
+      field.oilProductions.forEach(production => {
+        if (production.oilKg > 0) {
+          history.push({
+            type: 'grind',
+            location: field.location,
+            date: production.dateGrinded || 'No date',
+            sacksUsed: production.sacksUsed,
+            oilKg: production.oilKg,
+          });
+        }
+      });
+
+      field.oilProfits.forEach(profit => {
+        if (profit.oilKgSold > 0) {
+          history.push({
+            type: 'sale',
+            location: field.location,
+            date: profit.dateSold || 'No date',
+            oilKg: profit.oilKgSold,
+            pricePerKg: profit.pricePerKg,
+            totalEarned: profit.totalEarned,
+          });
+        }
+      });
+    });
+
+
+    history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.status(200).json({ history });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error fetching combined history',
+      error: error.message 
+    });
+  }
+});
+
+
+app.post('/api/addOtherProfit', async (req, res) => {
+  try {
+    const { email, otherProfitData } = req.body;
+
+
+    const requiredFields = ['type', 'date', 'profitNo'];
+    for (const field of requiredFields) {
+      if (!otherProfitData[field]) {
+        return res.status(400).json({ message: `Missing: ${field}` });
+      }
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+
+    const profitToAdd = {
+      type: otherProfitData.type,
+      date: otherProfitData.date,
+      profitNo: Number(otherProfitData.profitNo),
+      notes: otherProfitData.notes || ''
+    };
+
+    console.log(Number(otherProfitData.profitNo))
+    user.otherProfits.push(profitToAdd);
+    user.totalProfits = (user.totalProfits || 0) + profitToAdd.profitNo;
+
+    await user.save();
+
+    res.status(200).json({ message: 'Other profit added successfully' });
+  } catch (error) {
+    console.error('Error saving other profit:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+
+
+
+
+app.post('/api/deleteOtherProfit', async (req, res) => {
+  try {
+    const { email, type, date, profitNo } = req.body;
+    
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+
+    const profitIndex = user.otherProfits.findIndex(
+      p => p.type === type && p.date === date && p.profitNo === profitNo
+    );
+
+    if (profitIndex === -1) {
+      return res.status(404).json({ message: 'Profit not found' });
+    }
+
+    user.otherProfits.splice(profitIndex, 1);
+    await user.save();
+
+    res.status(200).json({ message: 'Profit deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error retrieving profit history', 
+      error: error.message 
+    });
+  }
+});
 
 
 app.listen(PORT, '0.0.0.0', () => {

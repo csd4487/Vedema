@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user.dart';
@@ -53,7 +54,9 @@ class _AddNewNotePageState extends State<AddNewNotePage> {
       final formattedDate =
           '${selectedDate!.year.toString().padLeft(4, '0')}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}';
 
-      final url = Uri.parse('http://192.168.1.2:5000/api/addNote');
+      final url = Uri.parse(
+        'https://94b6-79-131-87-183.ngrok-free.app/api/addNote',
+      );
 
       final response = await http.post(
         url,
@@ -76,9 +79,14 @@ class _AddNewNotePageState extends State<AddNewNotePage> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("NewNote", style: TextStyle(color: Colors.white)),
+        title: Text(
+          localizations.newNote,
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: borderColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -94,8 +102,8 @@ class _AddNewNotePageState extends State<AddNewNotePage> {
               Row(
                 children: [
                   Image.asset('assets/logo.png', height: 85, width: 85),
-                  const Text(
-                    'Add New Note',
+                  Text(
+                    localizations.addNewNote,
                     textAlign: TextAlign.left,
                     style: TextStyle(fontSize: 23, color: Color(0xFF655B40)),
                   ),
@@ -107,35 +115,34 @@ class _AddNewNotePageState extends State<AddNewNotePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Note',
+                    Text(
+                      localizations.note,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _noteController,
                       maxLines: 3,
-                      style: const TextStyle(color: Color(0xFF655B40)),
+                      style: TextStyle(color: Color(0xFF655B40)),
                       decoration: InputDecoration(
-                        hintText: 'Enter your note',
-                        hintStyle: const TextStyle(color: Color(0xFF655B40)),
+                        hintText: localizations.enterNote,
+                        hintStyle: TextStyle(color: Color(0xFF655B40)),
                         border: border,
                         enabledBorder: border,
                         focusedBorder: border,
                         errorBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(
-                            color: Colors.red,
-                            width: 2.0,
-                          ),
+                          borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
                       ),
                       validator:
                           (value) =>
-                              value!.isEmpty ? 'Please enter a note' : null,
+                              value!.isEmpty
+                                  ? localizations.pleaseEnterNote
+                                  : null,
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      'Date',
+                    Text(
+                      localizations.date,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
@@ -152,14 +159,12 @@ class _AddNewNotePageState extends State<AddNewNotePage> {
                           validator:
                               (value) =>
                                   value!.isEmpty
-                                      ? 'Please select a date'
+                                      ? localizations.pleaseSelectDate
                                       : null,
-                          style: const TextStyle(color: Color(0xFF655B40)),
+                          style: TextStyle(color: Color(0xFF655B40)),
                           decoration: InputDecoration(
-                            hintText: 'Select a date',
-                            hintStyle: const TextStyle(
-                              color: Color(0xFF655B40),
-                            ),
+                            hintText: localizations.selectDate,
+                            hintStyle: TextStyle(color: Color(0xFF655B40)),
                             border: border,
                             enabledBorder: border,
                             focusedBorder: border,
@@ -169,25 +174,33 @@ class _AddNewNotePageState extends State<AddNewNotePage> {
                     ),
                     const SizedBox(height: 20),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Checkbox(
-                          value: sendEmail,
-                          activeColor: borderColor,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              sendEmail = value ?? false;
-                            });
-                          },
+                        SizedBox(
+                          width: 24,
+                          child: Checkbox(
+                            value: sendEmail,
+                            activeColor: borderColor,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                sendEmail = value ?? false;
+                              });
+                            },
+                          ),
                         ),
-                        const Text(
-                          'Send Note in Email',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF655B40),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            localizations.sendNoteInEmail,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF655B40),
+                            ),
                           ),
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 30),
                     Center(
                       child: SizedBox(
@@ -201,8 +214,8 @@ class _AddNewNotePageState extends State<AddNewNotePage> {
                               borderRadius: BorderRadius.circular(30),
                             ),
                           ),
-                          child: const Text(
-                            'Add New Note',
+                          child: Text(
+                            localizations.addNewNoteButton,
                             style: TextStyle(color: Colors.white, fontSize: 18),
                           ),
                         ),

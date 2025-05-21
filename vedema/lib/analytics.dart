@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 import 'user.dart';
 import 'fields.dart';
-import 'userhomepage.dart';
+import 'expenses.dart';
 import 'settings.dart';
 import 'voicecommands.dart';
 import 'analyticsdefault.dart';
@@ -28,6 +32,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     'Other',
   ];
   String chartType = 'Pie Chart';
+  String? selectedPeriod;
+  List<String> availablePeriods = [];
 
   final List<String> taskOptions = [
     'Irrigation',
@@ -35,14 +41,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     'Spraying',
     'Other',
   ];
-
   final List<String> chartOptions = [
     'Pie Chart',
     'Bar Chart',
     'Line Chart',
     'Doughnut Chart',
   ];
-
   List<String> fieldOptions = [];
 
   @override
@@ -53,33 +57,91 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _isListening = listening;
       });
     });
-    _loadFields();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final loc = AppLocalizations.of(context)!;
+
+    setState(() {
+      fieldOptions = widget.user.fields.map((f) => f.location).toList();
+      fieldOptions.add(loc.otherExpenses);
+      selectedFields = List.from(fieldOptions);
+    });
+
+    _fetchAvailablePeriods();
   }
 
   void _loadFields() {
     setState(() {
       fieldOptions = widget.user.fields.map((f) => f.location).toList();
-      fieldOptions.add('Other Expenses');
+      fieldOptions.add(AppLocalizations.of(context)!.otherExpenses);
       selectedFields = List.from(fieldOptions);
     });
   }
 
+  void _fetchAvailablePeriods() async {
+    final url = Uri.parse(
+      'https://94b6-79-131-87-183.ngrok-free.app/api/getAvailablePeriods',
+    );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': widget.user.email}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        availablePeriods = List<String>.from(data['periods']);
+        if (availablePeriods.isNotEmpty) {
+          selectedPeriod ??= availablePeriods.first;
+        }
+      });
+    } else {
+      print('Failed to fetch periods: ${response.body}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
+    final typeLabels = {
+      'Expenses': loc.expenses,
+      'Profits': loc.profits,
+      'Both': loc.both,
+    };
+
+    final taskLabels = {
+      'Irrigation': loc.irrigation,
+      'Fertilization': loc.fertilization,
+      'Spraying': loc.spraying,
+      'Other': loc.other,
+    };
+
+    final chartLabels = {
+      'Pie Chart': loc.pieChart,
+      'Bar Chart': loc.barChart,
+      'Line Chart': loc.lineChart,
+      'Doughnut Chart': loc.doughnutChart,
+    };
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF655B40),
         automaticallyImplyLeading: false,
-        title: const Text('Analytics', style: TextStyle(color: Colors.white)),
+        title: Text(loc.analytics, style: const TextStyle(color: Colors.white)),
         actions: [
           IconButton(
             icon:
                 _isListening
                     ? const Icon(Icons.mic, color: Colors.red, size: 30)
                     : const Icon(Icons.mic_none, color: Colors.white, size: 30),
-            onPressed: () {
-              _voiceHandler.toggleListening(context, widget.user);
-            },
+            onPressed:
+                () => _voiceHandler.toggleListening(context, widget.user),
           ),
           IconButton(
             icon: Image.asset('assets/menuicon.png', width: 35, height: 35),
@@ -98,18 +160,49 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Filter Analytics',
-              style: TextStyle(fontSize: 22, color: Color(0xFF655B40)),
+            Text(
+              loc.filterAnalytics,
+              style: const TextStyle(fontSize: 22, color: Color(0xFF655B40)),
             ),
             const SizedBox(height: 16),
+            Text(
+              loc.selectPeriod,
+              style: const TextStyle(color: Color(0xFF655B40)),
+            ),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              value: selectedPeriod,
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              items:
+                  availablePeriods
+                      .map(
+                        (period) => DropdownMenuItem(
+                          value: period,
+                          child: Text(
+                            period,
+                            style: const TextStyle(color: Color(0xFF655B40)),
+                          ),
+                        ),
+                      )
+                      .toList(),
+              onChanged: (value) => setState(() => selectedPeriod = value!),
+            ),
+            const SizedBox(height: 20),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Select Fields',
-                  style: TextStyle(color: Color(0xFF655B40)),
+                Text(
+                  loc.selectFields,
+                  style: const TextStyle(color: Color(0xFF655B40)),
                 ),
                 TextButton(
                   onPressed: () {
@@ -123,8 +216,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   },
                   child: Text(
                     selectedFields.length == fieldOptions.length
-                        ? 'Deselect All'
-                        : 'Select All',
+                        ? loc.deselectAll
+                        : loc.selectAll,
                     style: const TextStyle(color: Color(0xFF655B40)),
                   ),
                 ),
@@ -133,93 +226,97 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             Wrap(
               spacing: 10,
               children:
-                  fieldOptions.map((field) {
-                    return FilterChip(
-                      label: Text(field),
-                      selected: selectedFields.contains(field),
-                      selectedColor: const Color(0xFF655B40),
-                      labelStyle: TextStyle(
-                        color:
-                            selectedFields.contains(field)
-                                ? Colors.white
-                                : const Color(0xFF655B40),
-                      ),
-                      backgroundColor: Colors.white,
-                      onSelected: (bool selected) {
-                        setState(() {
-                          selected
-                              ? selectedFields.add(field)
-                              : selectedFields.remove(field);
-                        });
-                      },
-                    );
-                  }).toList(),
+                  fieldOptions
+                      .map(
+                        (field) => FilterChip(
+                          label: Text(field),
+                          selected: selectedFields.contains(field),
+                          selectedColor: const Color(0xFF655B40),
+                          labelStyle: TextStyle(
+                            color:
+                                selectedFields.contains(field)
+                                    ? Colors.white
+                                    : const Color(0xFF655B40),
+                          ),
+                          backgroundColor: Colors.white,
+                          onSelected: (bool selected) {
+                            setState(() {
+                              selected
+                                  ? selectedFields.add(field)
+                                  : selectedFields.remove(field);
+                            });
+                          },
+                        ),
+                      )
+                      .toList(),
             ),
-
             const SizedBox(height: 20),
 
-            const Text('View Type', style: TextStyle(color: Color(0xFF655B40))),
+            Text(
+              loc.viewType,
+              style: const TextStyle(color: Color(0xFF655B40)),
+            ),
             Wrap(
               spacing: 10,
               children:
-                  ['Expenses', 'Profits', 'Both'].map((type) {
+                  typeLabels.entries.map((entry) {
                     return ChoiceChip(
-                      label: Text(type),
-                      selected: viewType == type,
+                      label: Text(entry.value),
+                      selected: viewType == entry.key,
                       selectedColor: const Color(0xFF655B40),
                       labelStyle: TextStyle(
                         color:
-                            viewType == type
+                            viewType == entry.key
                                 ? Colors.white
                                 : const Color(0xFF655B40),
                       ),
                       onSelected: (_) {
                         setState(() {
-                          viewType = type;
+                          viewType = entry.key;
                         });
                       },
                       backgroundColor: Colors.white,
                     );
                   }).toList(),
             ),
-
             const SizedBox(height: 20),
 
-            const Text(
-              'Select Tasks',
-              style: TextStyle(color: Color(0xFF655B40)),
+            Text(
+              loc.selectTasks,
+              style: const TextStyle(color: Color(0xFF655B40)),
             ),
             Wrap(
               spacing: 10,
               children:
-                  taskOptions.map((task) {
-                    return FilterChip(
-                      label: Text(task),
-                      selected: selectedTasks.contains(task),
-                      selectedColor: const Color(0xFF655B40),
-                      labelStyle: TextStyle(
-                        color:
-                            selectedTasks.contains(task)
-                                ? Colors.white
-                                : const Color(0xFF655B40),
-                      ),
-                      backgroundColor: Colors.white,
-                      onSelected: (bool selected) {
-                        setState(() {
-                          selected
-                              ? selectedTasks.add(task)
-                              : selectedTasks.remove(task);
-                        });
-                      },
-                    );
-                  }).toList(),
+                  taskOptions
+                      .map(
+                        (task) => FilterChip(
+                          label: Text(taskLabels[task] ?? task),
+                          selected: selectedTasks.contains(task),
+                          selectedColor: const Color(0xFF655B40),
+                          labelStyle: TextStyle(
+                            color:
+                                selectedTasks.contains(task)
+                                    ? Colors.white
+                                    : const Color(0xFF655B40),
+                          ),
+                          backgroundColor: Colors.white,
+                          onSelected: (bool selected) {
+                            setState(() {
+                              selected
+                                  ? selectedTasks.add(task)
+                                  : selectedTasks.remove(task);
+                            });
+                          },
+                        ),
+                      )
+                      .toList(),
             ),
-
             const SizedBox(height: 20),
 
-            const Text(
-              'Chart Type',
-              style: TextStyle(color: Color(0xFF655B40)),
+            Text(
+              loc.chartType,
+              style: const TextStyle(color: Color(0xFF655B40)),
             ),
             SizedBox(
               width: 260,
@@ -237,15 +334,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 dropdownColor: Colors.white,
                 iconEnabledColor: const Color(0xFF655B40),
                 items:
-                    chartOptions.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(
-                          type,
-                          style: const TextStyle(color: Color(0xFF655B40)),
-                        ),
-                      );
-                    }).toList(),
+                    chartOptions
+                        .map(
+                          (type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(
+                              chartLabels[type] ?? type,
+                              style: const TextStyle(color: Color(0xFF655B40)),
+                            ),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (value) {
                   setState(() {
                     chartType = value!;
@@ -253,7 +352,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 },
               ),
             ),
-
             const SizedBox(height: 30),
 
             Row(
@@ -280,7 +378,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       ),
                     );
                   },
-                  child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+                  child: Text(loc.cancel, style: const TextStyle(fontSize: 16)),
                 ),
                 const SizedBox(width: 20),
                 ElevatedButton(
@@ -299,13 +397,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                             (_) => AnalyticsDefaultPage(
                               user: widget.user,
                               analyticsType: 'filtered',
+                              selectedPeriod: selectedPeriod,
+                              selectedFields: selectedFields,
+                              viewType: viewType,
+                              selectedTasks: selectedTasks,
+                              chartType: chartType,
                             ),
                       ),
                     );
                   },
-                  child: const Text(
-                    'Apply',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  child: Text(
+                    loc.apply,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ),
               ],
@@ -319,7 +422,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildNavItem(context, 'assets/field.png', 'Fields', () {
+            _buildNavItem(context, 'assets/field.png', loc.fields, () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -327,15 +430,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 ),
               );
             }),
-            _buildNavItem(context, 'assets/expensesfooter.png', 'Expenses', () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => UserHomePage(user: widget.user),
-                ),
-              );
-            }),
-            _buildNavItem(context, 'assets/stats.png', 'Analytics', () {}),
+            _buildNavItem(
+              context,
+              'assets/expensesfooter.png',
+              loc.expenses,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AllFieldsExpensesScreen(user: widget.user),
+                  ),
+                );
+              },
+            ),
+            _buildNavItem(context, 'assets/stats.png', loc.analytics, () {}),
           ],
         ),
       ),

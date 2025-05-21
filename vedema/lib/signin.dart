@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'signup.dart';
@@ -19,6 +20,7 @@ class SignInScreenState extends State<SignInScreen> {
   String? _passwordError;
 
   Future<void> _submitForm() async {
+    final loc = AppLocalizations.of(context)!;
     if (_formKey.currentState!.validate()) {
       setState(() {
         _emailError = null;
@@ -26,7 +28,7 @@ class SignInScreenState extends State<SignInScreen> {
       });
       try {
         final response = await http.post(
-          Uri.parse('http://192.168.1.2:5000/api/signin'),
+          Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/signin'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'email': user.email, 'password': user.password}),
         );
@@ -51,8 +53,8 @@ class SignInScreenState extends State<SignInScreen> {
           );
         } else {
           setState(() {
-            _emailError = "Email and password do not match an existing user";
-            _passwordError = "Email and password do not match an existing user";
+            _emailError = loc.invalidEmail;
+            _passwordError = loc.invalidEmail;
           });
         }
       } catch (error) {
@@ -67,162 +69,169 @@ class SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = Color(0xFF655B40);
+    final loc = AppLocalizations.of(context)!;
+    final borderColor = const Color(0xFF655B40);
     final border = OutlineInputBorder(
       borderSide: BorderSide(color: borderColor, width: 2.0),
     );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Log In", style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF655B40),
+        title: Text(loc.login, style: const TextStyle(color: Colors.white)),
+        backgroundColor: borderColor,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(15.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Image.asset('assets/logo.png', height: 85, width: 85),
-                  const Text(
-                    'Welcome back',
-                    textAlign: TextAlign.left,
-                    style: TextStyle(fontSize: 23, color: Color(0xFF655B40)),
+        padding: const EdgeInsets.all(15.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Image.asset('assets/logo.png', height: 85, width: 85),
+                const SizedBox(width: 10),
+                Text(
+                  loc.login,
+                  style: const TextStyle(
+                    fontSize: 23,
+                    color: Color(0xFF655B40),
                   ),
-                ],
-              ),
-              const SizedBox(height: 25),
-              Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Email',
-                      style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 25),
+            Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    loc.email,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF655B40),
                     ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      onChanged: (value) {
-                        user.email = value;
-                      },
-                      validator:
-                          (value) => value!.isEmpty ? 'Enter an email' : null,
-                      style: TextStyle(color: Color(0xFF655B40)),
-                      decoration: InputDecoration(
-                        enabledBorder: border,
-                        focusedBorder: border,
-                        errorBorder: border,
-                        disabledBorder: border,
-                        focusedErrorBorder: border,
-                        hintText: 'Enter your email',
-                        hintStyle: TextStyle(color: Color(0xFF655B40)),
-                        errorText: _emailError,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    onChanged: (value) => user.email = value,
+                    validator:
+                        (value) => value!.isEmpty ? loc.fieldRequired : null,
+                    style: const TextStyle(color: Color(0xFF655B40)),
+                    decoration: InputDecoration(
+                      enabledBorder: border,
+                      focusedBorder: border,
+                      errorBorder: border,
+                      disabledBorder: border,
+                      focusedErrorBorder: border,
+                      hintText: loc.enterEmail,
+                      hintStyle: const TextStyle(color: Color(0xFF655B40)),
+                      errorText: _emailError,
+                    ),
+                  ),
+                  const SizedBox(height: 13),
+                  Text(
+                    loc.password,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF655B40),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    obscureText: !_isPasswordVisible,
+                    onChanged: (value) => user.password = value,
+                    validator:
+                        (value) => value!.isEmpty ? loc.fieldRequired : null,
+                    style: const TextStyle(color: Color(0xFF655B40)),
+                    decoration: InputDecoration(
+                      enabledBorder: border,
+                      focusedBorder: border,
+                      errorBorder: border,
+                      disabledBorder: border,
+                      focusedErrorBorder: border,
+                      hintText: loc.enterPassword,
+                      hintStyle: const TextStyle(color: Color(0xFF655B40)),
+                      errorText: _passwordError,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: const Color(0xFF655B40),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
                       ),
                     ),
-                    const SizedBox(height: 13),
-                    const Text(
-                      'Password',
-                      style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      obscureText: !_isPasswordVisible,
-                      onChanged: (value) {
-                        user.password = value;
-                      },
-                      validator:
-                          (value) => value!.isEmpty ? 'Enter a password' : null,
-                      style: TextStyle(color: Color(0xFF655B40)),
-                      decoration: InputDecoration(
-                        enabledBorder: border,
-                        focusedBorder: border,
-                        errorBorder: border,
-                        disabledBorder: border,
-                        focusedErrorBorder: border,
-                        hintText: 'Enter your password',
-                        hintStyle: TextStyle(color: Color(0xFF655B40)),
-                        errorText: _passwordError,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isPasswordVisible
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: const Color(0xFF655B40),
+                  ),
+                  const SizedBox(height: 40),
+                  Center(
+                    child: SizedBox(
+                      width: 250,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF655B40),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _isPasswordVisible = !_isPasswordVisible;
-                            });
-                          },
+                        ),
+                        child: Text(
+                          loc.login,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 40),
-                    Center(
-                      child: SizedBox(
-                        width: 250,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _submitForm,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF655B40),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        loc.alreadyHaveAccountnot,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF655B40),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SignUpScreen(),
                             ),
-                          ),
-                          child: const Text(
-                            'Log In',
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "You don't have an account?",
-                          style: TextStyle(
+                          );
+                        },
+                        child: Text(
+                          loc.signup,
+                          style: const TextStyle(
                             fontSize: 16,
                             color: Color(0xFF655B40),
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SignUpScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            "Sign Up",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF655B40),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 75),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 75),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

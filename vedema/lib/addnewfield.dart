@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'user.dart';
@@ -38,7 +39,7 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
         };
 
         final response = await http.post(
-          Uri.parse('http://192.168.1.2:5000/api/addField'),
+          Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/addField'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(requestData),
         );
@@ -46,7 +47,7 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
         if (!mounted) return;
 
         if (response.statusCode == 200) {
-          logger.i("Field added successfully");
+          logger.i(AppLocalizations.of(context)!.fieldAddedSuccess);
 
           widget.user.fields.add(
             Field(_location, _size, _oliveNo, _cubics, _price, _species),
@@ -69,9 +70,11 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("NewField"),
+        title: Text(localizations.newField),
         backgroundColor: const Color(0xFF655B40),
         iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
@@ -85,8 +88,8 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
               Row(
                 children: [
                   Image.asset('assets/logo.png', height: 85, width: 85),
-                  const Text(
-                    'Add your field',
+                  Text(
+                    localizations.addYourField,
                     textAlign: TextAlign.left,
                     style: TextStyle(fontSize: 23, color: Color(0xFF655B40)),
                   ),
@@ -98,14 +101,14 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Location',
+                    Text(
+                      localizations.location,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
-                      style: const TextStyle(color: Color(0xFF655B40)),
-                      decoration: const InputDecoration(
+                      style: TextStyle(color: Color(0xFF655B40)),
+                      decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: Color(0xFF655B40),
@@ -127,7 +130,7 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter your field location',
+                        hintText: localizations.enterLocation,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                       ),
                       onChanged: (value) {
@@ -137,23 +140,23 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Field Size',
+                    Text(
+                      localizations.fieldSize,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
-                      style: const TextStyle(color: Color(0xFF655B40)),
+                      style: TextStyle(color: Color(0xFF655B40)),
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: Color(0xFF655B40),
@@ -175,9 +178,9 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter your field size',
+                        hintText: localizations.enterFieldSize,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
-                        suffixText: 'm²',
+                        suffixText: localizations.squareMeters,
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -186,21 +189,21 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Olive Count',
+                    Text(
+                      localizations.oliveCount,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
-                      style: const TextStyle(color: Color(0xFF655B40)),
+                      style: TextStyle(color: Color(0xFF655B40)),
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: Color(0xFF655B40),
@@ -222,7 +225,7 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter number of olive Trees',
+                        hintText: localizations.enterOliveCount,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                       ),
                       onChanged: (value) {
@@ -232,20 +235,20 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Species',
+                    Text(
+                      localizations.species,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
-                      style: const TextStyle(color: Color(0xFF655B40)),
-                      decoration: const InputDecoration(
+                      style: TextStyle(color: Color(0xFF655B40)),
+                      decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: Color(0xFF655B40),
@@ -267,7 +270,7 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter olive species',
+                        hintText: localizations.enterSpecies,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                       ),
                       onChanged: (value) {
@@ -277,23 +280,23 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Cubics',
+                    Text(
+                      localizations.cubics,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
-                      style: const TextStyle(color: Color(0xFF655B40)),
+                      style: TextStyle(color: Color(0xFF655B40)),
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: Color(0xFF655B40),
@@ -315,7 +318,7 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter cubics volume',
+                        hintText: localizations.enterCubics,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
                       ),
                       onChanged: (value) {
@@ -325,23 +328,23 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 13),
-                    const Text(
-                      'Price',
+                    Text(
+                      localizations.price,
                       style: TextStyle(fontSize: 18, color: Color(0xFF655B40)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
-                      style: const TextStyle(color: Color(0xFF655B40)),
+                      style: TextStyle(color: Color(0xFF655B40)),
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: Color(0xFF655B40),
@@ -363,9 +366,9 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                         errorBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.red, width: 2.0),
                         ),
-                        hintText: 'Enter price per m³',
+                        hintText: localizations.enterPrice,
                         hintStyle: TextStyle(color: Color(0xFF655B40)),
-                        suffixText: '€',
+                        suffixText: localizations.euroSymbol,
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -374,7 +377,7 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'You need to fill this field.';
+                          return localizations.fieldRequired;
                         }
                         return null;
                       },
@@ -390,8 +393,8 @@ class _AddNewFieldScreenState extends State<AddNewFieldScreen> {
                             backgroundColor: const Color(0xFF655B40),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text(
-                            'Add Field',
+                          child: Text(
+                            localizations.addField,
                             style: TextStyle(color: Colors.white, fontSize: 18),
                           ),
                         ),
