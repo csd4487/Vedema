@@ -516,16 +516,16 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const expenseSummary = {
-      Fertilization: 0,
-      Spraying: 0,
-      Irrigation: 0,
-      Other: 0,
+      fertilization: 0,
+      spraying: 0,
+      irrigation: 0,
+      other: 0,
     };
 
     const profitSummary = {
-      OilSales: 0,
-      SackSales: 0,
-      Other: 0,
+      oilsales: 0,
+      sacksales: 0,
+      other: 0,
     };
 
     let fieldMostExpenses = '';
@@ -546,23 +546,23 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
     user.fields.forEach(field => {
       let fieldExpenses = 0;
       const taskBreakdown = {
-        Fertilization: 0,
-        Spraying: 0,
-        Irrigation: 0,
-        Other: 0,
+        fertilization: 0,
+        spraying: 0,
+        irrigation: 0,
+        other: 0,
       };
 
       fieldExpenseDetails[field.location] = {
-        Fertilization: 0,
-        Spraying: 0,
-        Irrigation: 0,
-        Other: 0,
+        fertilization: 0,
+        spraying: 0,
+        irrigation: 0,
+        other: 0,
       };
 
       fieldProfitDetails[field.location] = {
-        oilSold: 0,
-        sacksSold: 0,
-        otherProfits: 0
+        oilsold: 0,
+        sackssold: 0,
+        other: 0,
       };
 
       field.expenses.forEach(expense => {
@@ -573,22 +573,23 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
           const cost = parseFloat(expense.cost) || 0;
           fieldExpenses += cost;
 
-          if (expense.task === 'Fertilization') {
-            expenseSummary.Fertilization += cost;
-            taskBreakdown.Fertilization += cost;
-            fieldExpenseDetails[field.location].Fertilization += cost;
-          } else if (expense.task === 'Spraying') {
-            expenseSummary.Spraying += cost;
-            taskBreakdown.Spraying += cost;
-            fieldExpenseDetails[field.location].Spraying += cost;
-          } else if (expense.task === 'Irrigation') {
-            expenseSummary.Irrigation += cost;
-            taskBreakdown.Irrigation += cost;
-            fieldExpenseDetails[field.location].Irrigation += cost;
+          const task = expense.task?.toLowerCase();
+          if (task === 'fertilization') {
+            expenseSummary.fertilization += cost;
+            taskBreakdown.fertilization += cost;
+            fieldExpenseDetails[field.location].fertilization += cost;
+          } else if (task === 'spraying') {
+            expenseSummary.spraying += cost;
+            taskBreakdown.spraying += cost;
+            fieldExpenseDetails[field.location].spraying += cost;
+          } else if (task === 'irrigation') {
+            expenseSummary.irrigation += cost;
+            taskBreakdown.irrigation += cost;
+            fieldExpenseDetails[field.location].irrigation += cost;
           } else {
-            expenseSummary.Other += cost;
-            taskBreakdown.Other += cost;
-            fieldExpenseDetails[field.location].Other += cost;
+            expenseSummary.other += cost;
+            taskBreakdown.other += cost;
+            fieldExpenseDetails[field.location].other += cost;
           }
         }
       });
@@ -609,11 +610,14 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
           if (isNaN(profitDate)) return;
 
           if (profitDate >= seasonStart && profitDate <= seasonEnd) {
-            const total = (parseFloat(p.oilKgSold) || 0) * (parseFloat(p.pricePerKg) || 0);
+            const oilQty = parseFloat(p.oilKgSold) || 0;
+            const oilPrice = parseFloat(p.pricePerKg) || 0;
+            const total = oilQty * oilPrice;
             fieldProfits += total;
-            oilKg += parseFloat(p.oilKgSold) || 0;
-            profitSummary.OilSales += total;
-            fieldProfitDetails[field.location].oilSold += parseFloat(p.oilKgSold) || 0;
+            oilKg += oilQty;
+
+            profitSummary.oilsales += total;
+            fieldProfitDetails[field.location].oilsold += oilQty;
           }
         });
       }
@@ -624,11 +628,14 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
           if (isNaN(profitDate)) return;
 
           if (profitDate >= seasonStart && profitDate <= seasonEnd) {
-            const total = (parseInt(p.sacks) || 0) * (parseFloat(p.price) || 0);
+            const sacksNum = parseInt(p.sacks) || 0;
+            const sackPrice = parseFloat(p.price) || 0;
+            const total = sacksNum * sackPrice;
             fieldProfits += total;
-            sacks += parseInt(p.sacks) || 0;
-            profitSummary.SackSales += total;
-            fieldProfitDetails[field.location].sacksSold += parseInt(p.sacks) || 0;
+            sacks += sacksNum;
+
+            profitSummary.sacksales += total;
+            fieldProfitDetails[field.location].sackssold += sacksNum;
           }
         });
       }
@@ -646,7 +653,7 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
       if (isNaN(otherDate)) return;
 
       if (otherDate >= seasonStart && otherDate <= seasonEnd) {
-        expenseSummary.Other += parseFloat(other.cost) || 0;
+        expenseSummary.other += parseFloat(other.cost) || 0;
       }
     });
 
@@ -656,12 +663,17 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
 
       if (otherDate >= seasonStart && otherDate <= seasonEnd) {
         const profit = parseFloat(other.profitNo) || 0;
-        profitSummary.Other += profit;
-        if (other.fieldLocation && fieldProfitDetails[other.fieldLocation]) {
-          fieldProfitDetails[other.fieldLocation].otherProfits += profit;
+        profitSummary.other += profit;
+
+        const location = other.fieldLocation;
+        if (location && fieldProfitDetails[location]) {
+          fieldProfitDetails[location].other += profit;
         }
       }
     });
+
+    const totalExpenses = Object.values(expenseSummary).reduce((a, b) => a + b, 0);
+    const totalProfits = Object.values(profitSummary).reduce((a, b) => a + b, 0);
 
     res.status(200).json({
       expenseSummary,
@@ -673,10 +685,9 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
       maxProfits,
       sacksSold: sacksOfTopField,
       oilKgSold: oilKgOfTopField,
-      totalExpenses: Object.values(expenseSummary).reduce((a, b) => a + b, 0),
-      totalProfits: Object.values(profitSummary).reduce((a, b) => a + b, 0),
-      netProfit: Object.values(profitSummary).reduce((a, b) => a + b, 0) - 
-                Object.values(expenseSummary).reduce((a, b) => a + b, 0),
+      totalExpenses,
+      totalProfits,
+      netProfit: totalProfits - totalExpenses,
       fieldExpenseDetails,
       fieldProfitDetails
     });
@@ -688,6 +699,7 @@ app.post('/api/getDefaultAnalytics', async (req, res) => {
   }
 });
 
+
 app.post('/api/getFilteredAnalytics', async (req, res) => {
   try {
     const { email, period, viewType, selectedTasks, selectedFields } = req.body;
@@ -698,17 +710,16 @@ app.post('/api/getFilteredAnalytics', async (req, res) => {
     const seasonStart = new Date(`${startYear}-09-01`);
     const seasonEnd = new Date(`${endYear}-08-31`);
 
-
     const expenseSummary = {
-      Fertilization: 0,
-      Spraying: 0,
-      Irrigation: 0,
-      Other: 0
+      fertilization: 0,
+      spraying: 0,
+      irrigation: 0,
+      other: 0
     };
     const profitSummary = {
-      OilSales: 0,
-      SackSales: 0,
-      Other: 0
+      oilsales: 0,
+      sacksales: 0,
+      other: 0
     };
 
     let fieldMostExpenses = '';
@@ -722,33 +733,30 @@ app.post('/api/getFilteredAnalytics', async (req, res) => {
     const fieldExpenseDetails = {};
     const fieldProfitDetails = {};
 
-
-    const fieldsToProcess = selectedFields && selectedFields.length > 0
+    const fieldsToProcess = selectedFields?.length > 0
       ? user.fields.filter(field => selectedFields.includes(field.location))
       : user.fields;
 
     fieldsToProcess.forEach(field => {
-
       fieldExpenseDetails[field.location] = {
-        Fertilization: 0,
-        Spraying: 0,
-        Irrigation: 0,
-        Other: 0
-      };
-      
-      fieldProfitDetails[field.location] = {
-        oilSold: 0,
-        sacksSold: 0,
-        otherProfits: 0
+        fertilization: 0,
+        spraying: 0,
+        irrigation: 0,
+        other: 0
       };
 
+      fieldProfitDetails[field.location] = {
+        oilsold: 0,
+        sackssold: 0,
+        other: 0
+      };
 
       let fieldExpenses = 0;
       const taskBreakdown = {
-        Fertilization: 0,
-        Spraying: 0,
-        Irrigation: 0,
-        Other: 0
+        fertilization: 0,
+        spraying: 0,
+        irrigation: 0,
+        other: 0
       };
 
       field.expenses.forEach(expense => {
@@ -757,30 +765,31 @@ app.post('/api/getFilteredAnalytics', async (req, res) => {
           const cost = parseFloat(expense.cost) || 0;
           fieldExpenses += cost;
 
-          switch (expense.task) {
-            case 'Fertilization':
-              expenseSummary.Fertilization += cost;
-              taskBreakdown.Fertilization += cost;
-              fieldExpenseDetails[field.location].Fertilization += cost;
+          const task = expense.task?.toLowerCase();
+          switch (task) {
+            case 'fertilization':
+              expenseSummary.fertilization += cost;
+              taskBreakdown.fertilization += cost;
+              fieldExpenseDetails[field.location].fertilization += cost;
               break;
-            case 'Spraying':
-              expenseSummary.Spraying += cost;
-              taskBreakdown.Spraying += cost;
-              fieldExpenseDetails[field.location].Spraying += cost;
+            case 'spraying':
+              expenseSummary.spraying += cost;
+              taskBreakdown.spraying += cost;
+              fieldExpenseDetails[field.location].spraying += cost;
               break;
-            case 'Irrigation':
-              expenseSummary.Irrigation += cost;
-              taskBreakdown.Irrigation += cost;
-              fieldExpenseDetails[field.location].Irrigation += cost;
+            case 'irrigation':
+              expenseSummary.irrigation += cost;
+              taskBreakdown.irrigation += cost;
+              fieldExpenseDetails[field.location].irrigation += cost;
               break;
             default:
-              expenseSummary.Other += cost;
-              taskBreakdown.Other += cost;
-              fieldExpenseDetails[field.location].Other += cost;
+              expenseSummary.other += cost;
+              taskBreakdown.other += cost;
+              fieldExpenseDetails[field.location].other += cost;
+              break;
           }
         }
       });
-
 
       if (fieldExpenses > maxExpenses || fieldMostExpenses === '') {
         maxExpenses = fieldExpenses;
@@ -788,39 +797,41 @@ app.post('/api/getFilteredAnalytics', async (req, res) => {
         fieldExpenseBreakdown = taskBreakdown;
       }
 
-
       let fieldProfits = 0;
       let sacks = 0;
       let oilKg = 0;
-
 
       if (Array.isArray(field.oilProfits)) {
         field.oilProfits.forEach(p => {
           const profitDate = new Date(p.dateSold);
           if (profitDate >= seasonStart && profitDate <= seasonEnd) {
-            const total = (parseFloat(p.oilKgSold) || 0) * (parseFloat(p.pricePerKg) || 0);
+            const oilQty = parseFloat(p.oilKgSold) || 0;
+            const oilPrice = parseFloat(p.pricePerKg) || 0;
+            const total = oilQty * oilPrice;
             fieldProfits += total;
-            oilKg += parseFloat(p.oilKgSold) || 0;
-            profitSummary.OilSales += total;
-            fieldProfitDetails[field.location].oilSold += parseFloat(p.oilKgSold) || 0;
+            oilKg += oilQty;
+
+            profitSummary.oilsales += total;
+            fieldProfitDetails[field.location].oilsold += oilQty;
           }
         });
       }
-
 
       if (Array.isArray(field.sackProfits)) {
         field.sackProfits.forEach(p => {
           const profitDate = new Date(p.date);
           if (profitDate >= seasonStart && profitDate <= seasonEnd) {
-            const total = (parseInt(p.sacks) || 0) * (parseFloat(p.price) || 0);
+            const sacksNum = parseInt(p.sacks) || 0;
+            const sackPrice = parseFloat(p.price) || 0;
+            const total = sacksNum * sackPrice;
             fieldProfits += total;
-            sacks += parseInt(p.sacks) || 0;
-            profitSummary.SackSales += total;
-            fieldProfitDetails[field.location].sacksSold += parseInt(p.sacks) || 0;
+            sacks += sacksNum;
+
+            profitSummary.sacksales += total;
+            fieldProfitDetails[field.location].sackssold += sacksNum;
           }
         });
       }
-
 
       if (fieldProfits > maxProfits || fieldMostProfits === '') {
         maxProfits = fieldProfits;
@@ -830,40 +841,37 @@ app.post('/api/getFilteredAnalytics', async (req, res) => {
       }
     });
 
-
     if (viewType === 'Both' || viewType === 'Expenses') {
       user.otherExpenses.forEach(other => {
         const otherDate = new Date(other.date);
         if (otherDate >= seasonStart && otherDate <= seasonEnd) {
-          expenseSummary.Other += parseFloat(other.cost) || 0;
+          expenseSummary.other += parseFloat(other.cost) || 0;
         }
       });
     }
-
 
     if (viewType === 'Both' || viewType === 'Profits') {
       user.otherProfits.forEach(other => {
         const otherDate = new Date(other.date);
         if (otherDate >= seasonStart && otherDate <= seasonEnd) {
           const profit = parseFloat(other.profitNo) || 0;
-          profitSummary.Other += profit;
-          if (other.fieldLocation && fieldProfitDetails[other.fieldLocation]) {
-            fieldProfitDetails[other.fieldLocation].otherProfits += profit;
+          profitSummary.other += profit;
+          const location = other.fieldLocation;
+          if (location && fieldProfitDetails[location]) {
+            fieldProfitDetails[location].other += profit;
           }
         }
       });
     }
 
-
-    const filteredExpenseSummary = (viewType === 'Profits') ? null : expenseSummary;
-    const filteredProfitSummary = (viewType === 'Expenses') ? null : profitSummary;
-    
+    const filteredExpenseSummary = viewType === 'Profits' ? null : expenseSummary;
+    const filteredProfitSummary = viewType === 'Expenses' ? null : profitSummary;
 
     const filteredFieldExpenseDetails = {};
     const filteredFieldProfitDetails = {};
-    
-    const fieldsToInclude = selectedFields && selectedFields.length > 0 
-      ? selectedFields 
+
+    const fieldsToInclude = selectedFields?.length > 0
+      ? selectedFields
       : user.fields.map(f => f.location);
 
     fieldsToInclude.forEach(location => {
@@ -875,15 +883,14 @@ app.post('/api/getFilteredAnalytics', async (req, res) => {
       }
     });
 
-
-    const totalExpenses = filteredExpenseSummary 
+    const totalExpenses = filteredExpenseSummary
       ? Object.values(filteredExpenseSummary).reduce((a, b) => a + b, 0)
       : null;
-      
+
     const totalProfits = filteredProfitSummary
       ? Object.values(filteredProfitSummary).reduce((a, b) => a + b, 0)
       : null;
-      
+
     const netProfit = (viewType === 'Both' && totalExpenses !== null && totalProfits !== null)
       ? totalProfits - totalExpenses
       : null;
@@ -907,9 +914,13 @@ app.post('/api/getFilteredAnalytics', async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error fetching filtered analytics', error: error.message });
+    res.status(500).json({
+      message: 'Error fetching filtered analytics',
+      error: error.message
+    });
   }
 });
+
 
 
 app.post('/api/addFieldSacks', async (req, res) => {

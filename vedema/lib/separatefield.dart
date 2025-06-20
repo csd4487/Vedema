@@ -55,7 +55,7 @@ class _SeparateFieldScreenState extends State<SeparateFieldScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getSingleField',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getSingleField',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -128,7 +128,7 @@ class _SeparateFieldScreenState extends State<SeparateFieldScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getAvailableSacks',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getAvailableSacks',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -174,7 +174,7 @@ class _SeparateFieldScreenState extends State<SeparateFieldScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getAvailableOil',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getAvailableOil',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -206,7 +206,7 @@ class _SeparateFieldScreenState extends State<SeparateFieldScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getProfitHistory',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getProfitHistory',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -265,7 +265,7 @@ class _SeparateFieldScreenState extends State<SeparateFieldScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/deleteExpense',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/deleteExpense',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -322,8 +322,8 @@ class _SeparateFieldScreenState extends State<SeparateFieldScreen> {
     try {
       final url =
           profit['type'] == 'sale'
-              ? 'https://94b6-79-131-87-183.ngrok-free.app/api/deleteSale'
-              : 'https://94b6-79-131-87-183.ngrok-free.app/api/deleteProfit';
+              ? 'https://d1ee-94-65-160-226.ngrok-free.app/api/deleteSale'
+              : 'https://d1ee-94-65-160-226.ngrok-free.app/api/deleteProfit';
 
       final body =
           profit['type'] == 'sale'

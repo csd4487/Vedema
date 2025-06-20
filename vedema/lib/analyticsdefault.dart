@@ -101,8 +101,8 @@ class _AnalyticsDefaultPageState extends State<AnalyticsDefaultPage> {
 
     final url = Uri.parse(
       widget.analyticsType == 'default'
-          ? 'https://94b6-79-131-87-183.ngrok-free.app/api/getDefaultAnalytics'
-          : 'https://94b6-79-131-87-183.ngrok-free.app/api/getFilteredAnalytics',
+          ? 'https://d1ee-94-65-160-226.ngrok-free.app/api/getDefaultAnalytics'
+          : 'https://d1ee-94-65-160-226.ngrok-free.app/api/getFilteredAnalytics',
     );
 
     final body =
@@ -777,60 +777,69 @@ class _AnalyticsDefaultPageState extends State<AnalyticsDefaultPage> {
   }
 
   void _processResponseData(Map<String, dynamic> data) {
-    Map<String, double> expenseSummary = {};
-    Map<String, double> profitSummary = {};
-    Map<String, double> expenseBreakdown = {};
+    // Process expense data
+    Map<String, double> expenseSummary = {
+      'Fertilization':
+          (data['expenseSummary']?['fertilization'] ?? 0).toDouble(),
+      'Spraying': (data['expenseSummary']?['spraying'] ?? 0).toDouble(),
+      'Irrigation': (data['expenseSummary']?['irrigation'] ?? 0).toDouble(),
+      'Other': (data['expenseSummary']?['other'] ?? 0).toDouble(),
+    };
 
-    if (data['expenseSummary'] != null) {
-      data['expenseSummary']?.forEach((key, value) {
-        if (value > 0) expenseSummary[key] = value.toDouble();
+    // Process profit data
+    Map<String, double> profitSummary = {
+      'Oil Sales': (data['profitSummary']?['oilsales'] ?? 0).toDouble(),
+      'Sack Sales': (data['profitSummary']?['sacksales'] ?? 0).toDouble(),
+      'Other': (data['profitSummary']?['other'] ?? 0).toDouble(),
+    };
+
+    // Process expense breakdown
+    Map<String, double> expenseBreakdown = {
+      'Fertilization':
+          (data['expenseBreakdown']?['fertilization'] ?? 0).toDouble(),
+      'Spraying': (data['expenseBreakdown']?['spraying'] ?? 0).toDouble(),
+      'Irrigation': (data['expenseBreakdown']?['irrigation'] ?? 0).toDouble(),
+      'Other': (data['expenseBreakdown']?['other'] ?? 0).toDouble(),
+    };
+
+    // Process field expense details
+    Map<String, Map<String, double>> fieldExpenseDetails = {};
+    if (data['fieldExpenseDetails'] != null) {
+      (data['fieldExpenseDetails'] as Map).forEach((field, tasks) {
+        fieldExpenseDetails[field] = {
+          'Fertilization': (tasks['fertilization'] ?? 0).toDouble(),
+          'Spraying': (tasks['spraying'] ?? 0).toDouble(),
+          'Irrigation': (tasks['irrigation'] ?? 0).toDouble(),
+          'Other': (tasks['other'] ?? 0).toDouble(),
+        };
       });
     }
 
-    if (data['profitSummary'] != null) {
-      data['profitSummary']?.forEach((key, value) {
-        if (value > 0) profitSummary[key] = value.toDouble();
-      });
-    }
-
-    if (data['expenseBreakdown'] != null) {
-      data['expenseBreakdown']?.forEach((key, value) {
-        if (value > 0) expenseBreakdown[key] = value.toDouble();
+    // Process field profit details
+    Map<String, Map<String, double>> fieldProfitDetails = {};
+    if (data['fieldProfitDetails'] != null) {
+      (data['fieldProfitDetails'] as Map).forEach((field, profits) {
+        fieldProfitDetails[field] = {
+          'Oil Sold': (profits['oilsold'] ?? 0).toDouble(),
+          'Sacks Sold': (profits['sackssold'] ?? 0).toDouble(),
+          'Other': (profits['other'] ?? 0).toDouble(),
+        };
       });
     }
 
     setState(() {
       _expenseData = expenseSummary;
       _profitData = profitSummary;
-      _fieldWithMostExpenses = data['fieldWithMostExpenses'] ?? 'No fields';
-      _fieldWithMostProfits = data['fieldWithMostProfits'] ?? 'No fields';
+      _expenseBreakdown = expenseBreakdown;
+      _fieldExpenseDetails = fieldExpenseDetails;
+      _fieldProfitDetails = fieldProfitDetails;
+      _fieldWithMostExpenses = data['fieldWithMostExpenses'] ?? '';
+      _fieldWithMostProfits = data['fieldWithMostProfits'] ?? '';
       _sacksSold = (data['sacksSold'] ?? 0).toDouble();
       _oilKgSold = (data['oilKgSold'] ?? 0).toDouble();
-      _expenseBreakdown = expenseBreakdown;
       _totalExpenses = (data['totalExpenses'] ?? 0).toDouble();
       _totalProfits = (data['totalProfits'] ?? 0).toDouble();
       _netProfit = (data['netProfit'] ?? 0).toDouble();
-
-      _fieldExpenseDetails = {};
-      if (data['fieldExpenseDetails'] != null) {
-        data['fieldExpenseDetails'].forEach((field, tasks) {
-          _fieldExpenseDetails[field] = {};
-          tasks.forEach((task, value) {
-            _fieldExpenseDetails[field]![task] = value.toDouble();
-          });
-        });
-      }
-
-      _fieldProfitDetails = {};
-      if (data['fieldProfitDetails'] != null) {
-        data['fieldProfitDetails'].forEach((field, profits) {
-          _fieldProfitDetails[field] = {};
-          profits.forEach((profitType, value) {
-            _fieldProfitDetails[field]![profitType] = value.toDouble();
-          });
-        });
-      }
-
       _isLoading = false;
     });
   }
@@ -1323,16 +1332,16 @@ class _AnalyticsDefaultPageState extends State<AnalyticsDefaultPage> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            for (final task in [
+                            const SizedBox(height: 8),
+                            for (final expenseType in [
+                              'Irrigation',
                               'Fertilization',
                               'Spraying',
-                              'Irrigation',
                               'Other',
                             ])
-                              if (_expenseData.containsKey(task)) ...[
-                                const SizedBox(height: 8),
+                              if (_expenseData.containsKey(expenseType)) ...[
                                 Text(
-                                  '${_translateTask(task, loc)}:',
+                                  '${_translateTask(expenseType, loc)}:',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -1343,7 +1352,8 @@ class _AnalyticsDefaultPageState extends State<AnalyticsDefaultPage> {
                                 ..._fieldExpenseDetails.entries.map((
                                   fieldEntry,
                                 ) {
-                                  final value = fieldEntry.value[task] ?? 0;
+                                  final value =
+                                      fieldEntry.value[expenseType] ?? 0;
                                   return value > 0
                                       ? Padding(
                                         padding: const EdgeInsets.symmetric(
@@ -1371,6 +1381,7 @@ class _AnalyticsDefaultPageState extends State<AnalyticsDefaultPage> {
                                       )
                                       : const SizedBox.shrink();
                                 }).toList(),
+                                const SizedBox(height: 8),
                               ],
                           ],
                         ),
@@ -1396,45 +1407,44 @@ class _AnalyticsDefaultPageState extends State<AnalyticsDefaultPage> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${loc.oilSales}:',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            ..._fieldProfitDetails.entries.map((fieldEntry) {
-                              final oilSold = fieldEntry.value['oilSold'] ?? 0;
-                              return oilSold > 0
-                                  ? Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 2,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          '${fieldEntry.key}:',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.white,
+                            for (final profitType in [
+                              'Oil Sold',
+                              'Sacks Sold',
+                              'Other',
+                            ])
+                              ..._fieldProfitDetails.entries.map((fieldEntry) {
+                                final value = fieldEntry.value[profitType] ?? 0;
+                                return value > 0
+                                    ? Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 2,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            '${fieldEntry.key}:',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.white,
+                                            ),
                                           ),
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          '${oilSold.toStringAsFixed(2)} kg',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.white,
+                                          const Spacer(),
+                                          Text(
+                                            profitType == 'Oil Sold'
+                                                ? '${value.toStringAsFixed(2)} kg'
+                                                : profitType == 'Sacks Sold'
+                                                ? '${value.toInt()} ${loc.sacks}'
+                                                : '${value.toStringAsFixed(2)} €',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.white,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                  : const SizedBox.shrink();
-                            }).toList(),
+                                        ],
+                                      ),
+                                    )
+                                    : const SizedBox.shrink();
+                              }).toList(),
                             const SizedBox(height: 4),
                             ..._fieldProfitDetails.entries.map((fieldEntry) {
                               final sacksSold =

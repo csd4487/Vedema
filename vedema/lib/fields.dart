@@ -41,7 +41,7 @@ class FieldsScreenState extends State<FieldsScreen> {
   Future<void> _loadFields() async {
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getFields'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/getFields'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
       );
@@ -111,7 +111,7 @@ class FieldsScreenState extends State<FieldsScreen> {
   Future<void> _deleteField(Field field) async {
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/deleteField'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/deleteField'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': widget.user.email,

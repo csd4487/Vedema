@@ -69,7 +69,7 @@
   "failedToDelete": "Αποτυχία διαγραφής σημείωσης",
   "emailSent": "Το email στάλθηκε επιτυχώς",
   "failedToSendEmail": "Αποτυχία αποστολής email",
-  "balance": "Υπόλοιπο:",
+  "balance": "Υπόλοιπο: ",
   "profits": "Κέρδη:",
   "totalExpenses": "Συνολικά Έξοδα",
   "totalProfits": "Συνολικά Κέρδη",

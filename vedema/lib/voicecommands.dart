@@ -115,7 +115,7 @@ class VoiceCommandHandler {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getFields'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/getFields'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': user.email}),
       );

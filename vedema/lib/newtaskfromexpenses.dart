@@ -29,8 +29,8 @@ class _NewTaskFormExpensesState extends State<NewTaskFormExpenses> {
   final _notesController = TextEditingController();
 
   DateTime? _selectedDate;
-  List<String> _fieldLocations = [];
-  String? _selectedFieldLocation;
+  List<dynamic> _fields = [];
+  String? _selectedLocation;
 
   late String _taskKey;
 
@@ -52,11 +52,23 @@ class _NewTaskFormExpensesState extends State<NewTaskFormExpenses> {
   }
 
   String _normalizeTaskKey(String taskName, AppLocalizations loc) {
-    final lower = taskName.toLowerCase();
-    if (lower == loc.irrigation.toLowerCase()) return 'irrigation';
-    if (lower == loc.fertilization.toLowerCase()) return 'fertilization';
-    if (lower == loc.spraying.toLowerCase()) return 'spraying';
-    if (lower == loc.other.toLowerCase()) return 'other';
+    final normalized = taskName.trim().toLowerCase();
+
+    if (normalized == 'fertilization' ||
+        normalized == loc.fertilization.toLowerCase()) {
+      return 'fertilization';
+    }
+    if (normalized == 'spraying' || normalized == loc.spraying.toLowerCase()) {
+      return 'spraying';
+    }
+    if (normalized == 'irrigation' ||
+        normalized == loc.irrigation.toLowerCase()) {
+      return 'irrigation';
+    }
+    if (normalized == 'other' || normalized == loc.other.toLowerCase()) {
+      return 'other';
+    }
+
     return 'other';
   }
 
@@ -66,33 +78,28 @@ class _NewTaskFormExpensesState extends State<NewTaskFormExpenses> {
   bool get _hideFieldSelection => _taskKey == 'other';
 
   Future<void> _fetchFields() async {
-    final loc = AppLocalizations.of(context)!;
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getFields'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/getFields'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': widget.user.email}),
+        body: jsonEncode({'email': widget.user.email}),
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final fields = List<Map<String, dynamic>>.from(data['fields']);
+        final data = jsonDecode(response.body);
         setState(() {
-          _fieldLocations =
-              fields.map((f) => f['location'].toString()).toList();
-          if (_fieldLocations.isNotEmpty) {
-            _selectedFieldLocation = _fieldLocations.first;
+          _fields = data['fields'];
+          if (_fields.isNotEmpty) {
+            _selectedLocation = _fields.first['location'];
           }
         });
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(loc.failedToLoadFields)));
+        throw Exception(AppLocalizations.of(context)!.failedToLoadFields);
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${loc.errorFetchingFields}: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${AppLocalizations.of(context)!.error}: $e')),
+      );
     }
   }
 
@@ -118,19 +125,19 @@ class _NewTaskFormExpensesState extends State<NewTaskFormExpenses> {
     if (_formKey.currentState!.validate()) {
       try {
         final expenseData = {
-          'task': _taskController.text,
+          'task': _normalizeTaskKey(_taskController.text, loc),
           'date': _dateController.text,
           'cost': double.parse(_costController.text),
           'synthesis': _hideSynthesisTypeNPK ? '' : _synthesisController.text,
           'type': _hideSynthesisTypeNPK ? '' : _typeController.text,
           'npk': _hideSynthesisTypeNPK ? '' : _npkController.text,
           'notes': _notesController.text,
-          'location': _hideFieldSelection ? null : _selectedFieldLocation,
+          'location': _hideFieldSelection ? null : _selectedLocation,
         };
 
         final response = await http.post(
           Uri.parse(
-            'https://94b6-79-131-87-183.ngrok-free.app/api/addExpenseSeparate',
+            'https://d1ee-94-65-160-226.ngrok-free.app/api/addExpenseSeparate',
           ),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({
@@ -277,11 +284,65 @@ class _NewTaskFormExpensesState extends State<NewTaskFormExpenses> {
               ),
               const SizedBox(height: 25),
               if (!_hideFieldSelection)
-                _buildTextField(
-                  loc.field,
-                  TextEditingController(text: _selectedFieldLocation ?? ''),
-                  loc.selectField,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 13),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loc.field,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF655B40),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _selectedLocation,
+                        items:
+                            _fields.map<DropdownMenuItem<String>>((field) {
+                              return DropdownMenuItem<String>(
+                                value: field['location'],
+                                child: Text(field['location']),
+                              );
+                            }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedLocation = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Color(0xFF655B40),
+                              width: 2.0,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Color(0xFF655B40),
+                              width: 2.0,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Color(0xFF655B40),
+                              width: 2.0,
+                            ),
+                          ),
+                          hintText: loc.selectField,
+                          hintStyle: const TextStyle(color: Color(0xFF655B40)),
+                        ),
+                        validator:
+                            (value) =>
+                                value == null || value.isEmpty
+                                    ? loc.selectField
+                                    : null,
+                      ),
+                    ],
+                  ),
                 ),
+
               _buildTextField(
                 loc.task,
                 _taskController,

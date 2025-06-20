@@ -31,7 +31,7 @@ class _NotesPageState extends State<NotesPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getNotes'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/getNotes'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
       );
@@ -83,7 +83,7 @@ class _NotesPageState extends State<NotesPage> {
   Future<void> _sendEmail(dynamic note) async {
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/sendEmail'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/sendEmail'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': widget.user.email,
@@ -130,7 +130,7 @@ class _NotesPageState extends State<NotesPage> {
   Future<void> _deleteNote(dynamic note) async {
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/deleteNote'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/deleteNote'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': widget.user.email,

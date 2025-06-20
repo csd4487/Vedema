@@ -34,7 +34,7 @@ class _AddNewProfit2State extends State<AddNewProfit2> {
   Future<void> _fetchFields() async {
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getFields'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/getFields'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
       );
@@ -60,7 +60,7 @@ class _AddNewProfit2State extends State<AddNewProfit2> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getAvailableSacks',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getAvailableSacks',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -93,7 +93,7 @@ class _AddNewProfit2State extends State<AddNewProfit2> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/grindSacks'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/grindSacks'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': widget.user.email,
@@ -134,7 +134,7 @@ class _AddNewProfit2State extends State<AddNewProfit2> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/addFieldSacks',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/addFieldSacks',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({

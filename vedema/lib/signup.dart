@@ -26,7 +26,7 @@ class SignUpScreenState extends State<SignUpScreen> {
     if (_formKey.currentState!.validate()) {
       try {
         final response = await http.post(
-          Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/signup'),
+          Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/signup'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'firstname': user.firstname,

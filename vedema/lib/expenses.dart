@@ -73,7 +73,7 @@ class _AllFieldsExpensesScreenState extends State<AllFieldsExpensesScreen> {
   Future<void> _fetchAllFields() async {
     try {
       final response = await http.post(
-        Uri.parse('https://94b6-79-131-87-183.ngrok-free.app/api/getFields'),
+        Uri.parse('https://d1ee-94-65-160-226.ngrok-free.app/api/getFields'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
       );
@@ -176,7 +176,7 @@ class _AllFieldsExpensesScreenState extends State<AllFieldsExpensesScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getOtherExpenses',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getOtherExpenses',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
@@ -221,7 +221,7 @@ class _AllFieldsExpensesScreenState extends State<AllFieldsExpensesScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getTotalAvailableSacks',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getTotalAvailableSacks',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
@@ -250,7 +250,7 @@ class _AllFieldsExpensesScreenState extends State<AllFieldsExpensesScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getTotalAvailableOil',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getTotalAvailableOil',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
@@ -279,7 +279,7 @@ class _AllFieldsExpensesScreenState extends State<AllFieldsExpensesScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/getAllProfitHistory',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/getAllProfitHistory',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': widget.user.email}),
@@ -338,7 +338,7 @@ class _AllFieldsExpensesScreenState extends State<AllFieldsExpensesScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'https://94b6-79-131-87-183.ngrok-free.app/api/deleteExpense',
+          'https://d1ee-94-65-160-226.ngrok-free.app/api/deleteExpense',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -398,10 +398,10 @@ class _AllFieldsExpensesScreenState extends State<AllFieldsExpensesScreen> {
     try {
       final url =
           profit['type'] == 'other'
-              ? 'https://94b6-79-131-87-183.ngrok-free.app/api/deleteOtherProfit'
+              ? 'https://d1ee-94-65-160-226.ngrok-free.app/api/deleteOtherProfit'
               : profit['type'] == 'sale'
-              ? 'https://94b6-79-131-87-183.ngrok-free.app/api/deleteSale'
-              : 'https://94b6-79-131-87-183.ngrok-free.app/api/deleteProfit';
+              ? 'https://d1ee-94-65-160-226.ngrok-free.app/api/deleteSale'
+              : 'https://d1ee-94-65-160-226.ngrok-free.app/api/deleteProfit';
 
       final body =
           profit['type'] == 'other'

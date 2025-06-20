@@ -55,7 +55,7 @@ class _AddNewNotePageState extends State<AddNewNotePage> {
           '${selectedDate!.year.toString().padLeft(4, '0')}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}';
 
       final url = Uri.parse(
-        'https://94b6-79-131-87-183.ngrok-free.app/api/addNote',
+        'https://d1ee-94-65-160-226.ngrok-free.app/api/addNote',
       );
 
       final response = await http.post(
